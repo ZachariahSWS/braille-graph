@@ -47,7 +47,7 @@ fn hash64(s: &str) -> u64 {
     h.finish()
 }
 
-/// Write centred coloured text between horizontal rules.
+/// Write centred colored text between horizontal rules.
 fn push_centered(buf: &mut String, text: &str, width: usize, color: &AnsiCode) {
     let inner = width.saturating_sub(TITLE_PADDING);
     let len = text.chars().count();

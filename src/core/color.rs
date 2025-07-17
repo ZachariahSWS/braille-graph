@@ -1,4 +1,4 @@
-//! Zero-alloc ANSI colour wrapper.  No external deps.
+//! Zero-alloc ANSI color wrapper.  No external deps.
 
 use std::{fmt, str};
 
@@ -48,7 +48,7 @@ impl AnsiCode {
         Self::Static("\x1b[0m")
     }
 
-    /// True-colour escape `ESC[38;2;R;G;Bm`.
+    /// True-color escape `ESC[38;2;R;G;Bm`.
     pub fn rgb(r: u8, g: u8, b: u8) -> Self {
         let mut buf = [0u8; 20];
         buf[..7].copy_from_slice(b"\x1b[38;2;");
@@ -69,7 +69,7 @@ impl AnsiCode {
         }
     }
 
-    /// Parse colour names or `#rrggbb`.  Falls back to hex parser on miss.
+    /// Parse color names or `#rrggbb`.  Falls back to hex parser on miss.
     pub fn from_name(s: &str) -> Result<Self, ColorError> {
         match s.trim().to_ascii_lowercase().as_str() {
             "black" => Ok(Self::black()),
@@ -149,7 +149,7 @@ impl fmt::Display for AnsiCode {
     }
 }
 
-/// Wrap `text` in colour + reset sequence.
+/// Wrap `text` in color + reset sequence.
 #[inline]
 pub fn colorize(c: &AnsiCode, text: &str) -> String {
     format!("{c}{text}{}", AnsiCode::reset())
@@ -158,8 +158,8 @@ pub fn colorize(c: &AnsiCode, text: &str) -> String {
 impl fmt::Display for ColorError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ColorError::InvalidHexDigit => f.write_str("invalid hex colour digit"),
-            ColorError::InvalidHexLength => f.write_str("hex colour must be exactly 6 digits"),
+            ColorError::InvalidHexDigit => f.write_str("invalid hex color digit"),
+            ColorError::InvalidHexLength => f.write_str("hex color must be exactly 6 digits"),
         }
     }
 }

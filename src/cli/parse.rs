@@ -15,7 +15,7 @@ pub struct Cli {
 pub enum Command {
     /// Plot data from a CSV file
     Csv(CsvArgs),
-    /// Show available colour names / hex syntax
+    /// Show available color names / hex syntax
     Colors,
     /// Animated Brownian motion demo
     Demo(DemoArgs),
@@ -52,7 +52,7 @@ pub struct CsvArgs {
     #[arg(long)]
     pub x_max: Option<f64>,
 
-    /// Colour (name or `#RRGGBB`)
+    /// Color (name or `#RRGGBB`)
     #[arg(long, default_value = "industrial")]
     pub color: String,
 

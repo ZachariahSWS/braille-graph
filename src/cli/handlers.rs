@@ -155,11 +155,11 @@ pub fn demo(a: DemoArgs) -> Result<(), GraphError> {
     Ok(())
 }
 
-/// Pretty-print available colour names + an example hex code.
+/// Pretty-print available color names + an example hex code.
 pub fn colors() {
     use crate::core::color::{AnsiCode, colorize};
 
-    println!("\nPossible colours:");
+    println!("\nPossible colors:");
     println!("{}", colorize(&AnsiCode::black(), "black"));
     println!("{}", colorize(&AnsiCode::red(), "red"));
     println!("{}", colorize(&AnsiCode::green(), "green"));
@@ -187,8 +187,8 @@ Example invocations
 -------------------
 • Basic CSV        : {bin} csv sample_data/industrial_production.csv
 • Cumulative plot  : {bin} csv sample_data/industrial_production.csv --cumulative
-• Named colour     : {bin} csv sample_data/industrial_production.csv --color blue
-• Hex colour       : {bin} csv sample_data/industrial_production.csv --color #6048c1
+• Named color     : {bin} csv sample_data/industrial_production.csv --color blue
+• Hex color       : {bin} csv sample_data/industrial_production.csv --color #6048c1
 • Custom title     : {bin} csv sample_data/industrial_production.csv \\
                       --title \"American Industrial Production, Aug 1929 = 100\"
 • Debug mode       : {bin} csv sample_data/industrial_production.csv --debug

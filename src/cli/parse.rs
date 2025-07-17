@@ -80,7 +80,7 @@ pub struct DemoArgs {
     pub mu: f64,
     #[arg(long, default_value_t = 1.0)]
     pub sigma: f64,
-    #[arg(long, default_value_t = 15)]
+    #[arg(long, default_value_t = 60)]
     pub fps: u64,
     #[arg(long, default_value = "industrial")]
     pub color: String,

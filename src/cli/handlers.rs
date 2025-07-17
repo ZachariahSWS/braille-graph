@@ -52,28 +52,6 @@ pub fn demo(a: DemoArgs) -> Result<(), GraphError> {
     use crate::core::bounds::{self, Axis};
     use crate::core::data::BRAILLE_HORIZONTAL_RESOLUTION;
 
-    // quit flag (q/Q)
-    use std::sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    };
-    fn quit_flag() -> Arc<AtomicBool> {
-        #[cfg(unix)]
-        crate::cli::tty_raw::enter_raw_mode().ok();
-        let f = Arc::new(AtomicBool::new(false));
-        let f2 = f.clone();
-        std::thread::spawn(move || {
-            use std::io::Read;
-            for b in std::io::stdin().bytes().flatten() {
-                if matches!(b, b'q' | b'Q') {
-                    f2.store(true, Ordering::Relaxed);
-                    break;
-                }
-            }
-        });
-        f
-    }
-
     // RNG + first samples
     let mut rng = Lcg::seed_from_time();
     let mut data = Vec::<DataTimeStep>::with_capacity(a.steps);
@@ -99,11 +77,10 @@ pub fn demo(a: DemoArgs) -> Result<(), GraphError> {
 
     // Render loop
     let mut renderer = Renderer::delta();
-    let stop = quit_flag();
     let frame_pause = std::time::Duration::from_millis(1_000 / a.fps.max(1));
     let mut i = data.len();
 
-    while i < a.steps && !stop.load(Ordering::Relaxed) {
+    while i < a.steps {
         // Append the next point
         let dw = rng.randn() * a.dt.sqrt();
         x += a.mu * a.dt + a.sigma * dw;

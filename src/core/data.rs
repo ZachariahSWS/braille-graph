@@ -86,7 +86,7 @@ fn parse_f64(bytes: &[u8], line: usize, field: &'static str) -> Result<f64, Pars
             text: String::from_utf8_lossy(bytes).into_owned(),
         },
     })?;
-    if val.is_nan() {
+    if !val.is_finite() {
         Err(ParseCsvError {
             line,
             kind: ParseErrorKind::BadFloat {

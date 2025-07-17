@@ -1,7 +1,5 @@
 mod handlers;
 pub mod parse;
-#[cfg(unix)]
-mod tty_raw;
 
 use clap::Parser;
 pub use parse::Cli;

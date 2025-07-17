@@ -148,13 +148,32 @@ pub fn build_frame(cfg: &Config, plot: &BraillePlot) -> Result<String, GraphErro
     Ok(out)
 }
 
+/// Hides the cursor on construction and shows it again on Drop
+struct CursorGuard;
+
+impl CursorGuard {
+    fn new() -> Self {
+        // hide → ESC[?25l
+        let _ = write!(stdout(), "\x1b[?25l");
+        CursorGuard
+    }
+}
+
+impl Drop for CursorGuard {
+    fn drop(&mut self) {
+        // show → ESC[?25h
+        let _ = write!(stdout(), "\x1b[?25h");
+        let _ = stdout().flush();
+    }
+}
+
 enum Strategy {
     /// Replace every character in the graph
     Full,
     /// Replace only the lines that changed.
     Delta {
         prev_hash: Vec<u64>,
-        cursor_hidden: bool,
+        first_frame: bool,
     },
 }
 
@@ -174,7 +193,7 @@ impl Renderer {
         Self {
             strat: Strategy::Delta {
                 prev_hash: Vec::new(),
-                cursor_hidden: false,
+                first_frame: true,
             },
         }
     }
@@ -187,12 +206,13 @@ impl Renderer {
             }
             Strategy::Delta {
                 prev_hash,
-                cursor_hidden,
+                first_frame,
             } => {
                 let mut term = stdout().lock();
-                if !*cursor_hidden {
-                    write!(term, "\x1b[?25l\x1b[2J\x1b[H")?; // hide cursor + clear
-                    *cursor_hidden = true;
+                let _cursor = CursorGuard::new();
+                if *first_frame {
+                    write!(term, "\x1b[2J\x1b[H")?; // hide cursor + clear
+                    *first_frame = false;
                 }
 
                 let mut row = 1usize;
@@ -226,8 +246,7 @@ impl Renderer {
 impl Drop for Renderer {
     fn drop(&mut self) {
         if let Strategy::Delta {
-            cursor_hidden: true,
-            ..
+            first_frame: false, ..
         } = self.strat
         {
             let _ = write!(stdout(), "\x1b[?25h");

@@ -1,0 +1,67 @@
+//! Geometry helpers: axis ranges + terminal size plumbing.
+
+use terminal_size::{Height, Width, terminal_size};
+
+use crate::core::data::{BRAILLE_HORIZONTAL_RESOLUTION, DataTimeStep};
+use crate::render::{BORDER_WIDTH, LABEL_GUTTER, MIN_GRAPH_HEIGHT};
+
+/// Which axis we’re measuring.
+pub enum Axis {
+    X,
+    Y,
+}
+
+impl Axis {
+    /// Inclusive bounds with ±5 % padding; handles degenerate one-point sets.
+    pub fn bounds(self, steps: &[DataTimeStep]) -> (f64, f64) {
+        let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
+        for s in steps {
+            match self {
+                Axis::X => {
+                    lo = lo.min(s.time);
+                    hi = hi.max(s.time);
+                }
+                Axis::Y => {
+                    lo = lo.min(s.min);
+                    hi = hi.max(s.max);
+                }
+            }
+        }
+        if !lo.is_finite() || !hi.is_finite() {
+            return (0.0, 1.0);
+        }
+        if (hi - lo).abs() < f64::EPSILON {
+            return (lo - 0.5, hi + 0.5);
+        }
+        let pad = (hi - lo) * 0.05;
+        (lo - pad, hi + pad)
+    }
+}
+
+/// Current terminal geometry (80×30 fallback).
+#[inline]
+pub fn terminal_geometry() -> (Width, Height) {
+    terminal_size().unwrap_or((Width(80), Height(30)))
+}
+
+/// Convert terminal dimensions + sample count to graph char grid.
+/// Leaves space for borders + labels.
+#[inline]
+pub fn graph_dims((w, h): (Width, Height), samples: usize) -> (usize, usize) {
+    let x_chars = (samples / BRAILLE_HORIZONTAL_RESOLUTION)
+        .min(w.0 as usize - BORDER_WIDTH - LABEL_GUTTER - 1);
+    let y_chars = (h.0 as usize).saturating_sub(4).max(MIN_GRAPH_HEIGHT);
+    (x_chars, y_chars)
+}
+
+/// How wide will the y-axis labels be for *current* min/max?
+#[inline]
+pub fn y_label_width(y_min: f64, y_max: f64, decimals: usize) -> usize {
+    use std::fmt::Write;
+    let mut s = String::new();
+    write!(&mut s, "{:.*}", decimals, y_min).unwrap();
+    let lo = s.len();
+    s.clear();
+    write!(&mut s, "{:.*}", decimals, y_max).unwrap();
+    lo.max(s.len())
+}

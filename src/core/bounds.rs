@@ -13,15 +13,16 @@ pub enum Axis {
 
 impl Axis {
     /// Inclusive bounds with ±5 % padding; handles degenerate one-point sets.
+    #[must_use]
     pub fn bounds(self, steps: &[DataTimeStep]) -> (f64, f64) {
         let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
         for s in steps {
             match self {
-                Axis::X => {
+                Self::X => {
                     lo = lo.min(s.time);
                     hi = hi.max(s.time);
                 }
-                Axis::Y => {
+                Self::Y => {
                     lo = lo.min(s.min);
                     hi = hi.max(s.max);
                 }
@@ -40,6 +41,7 @@ impl Axis {
 
 /// Current terminal geometry (80×30 fallback).
 #[inline]
+#[must_use]
 pub fn terminal_geometry() -> (Width, Height) {
     terminal_size().unwrap_or((Width(80), Height(30)))
 }
@@ -47,6 +49,7 @@ pub fn terminal_geometry() -> (Width, Height) {
 /// Convert terminal dimensions + sample count to graph char grid.
 /// Leaves space for borders + labels.
 #[inline]
+#[must_use]
 pub fn graph_dims((w, h): (Width, Height), samples: usize) -> (usize, usize) {
     let x_chars = (samples / BRAILLE_HORIZONTAL_RESOLUTION)
         .min(w.0 as usize - BORDER_WIDTH - LABEL_GUTTER - 1);
@@ -59,9 +62,9 @@ pub fn graph_dims((w, h): (Width, Height), samples: usize) -> (usize, usize) {
 pub fn y_label_width(y_min: f64, y_max: f64, decimals: usize) -> usize {
     use std::fmt::Write;
     let mut s = String::new();
-    write!(&mut s, "{:.*}", decimals, y_min).unwrap();
+    write!(&mut s, "{y_min:.decimals$}").unwrap();
     let lo = s.len();
     s.clear();
-    write!(&mut s, "{:.*}", decimals, y_max).unwrap();
+    write!(&mut s, "{y_max:.decimals$}").unwrap();
     lo.max(s.len())
 }

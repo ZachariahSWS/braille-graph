@@ -41,14 +41,14 @@ pub fn csv(a: CsvArgs) -> Result<(), GraphError> {
 
     // transform + render
     data = filter_and_bin(data, &cfg);
-    let plot = preprocess_to_braille(data, &cfg, a.cumulative)?;
+    let plot = preprocess_to_braille(&data, &cfg, a.cumulative)?;
     if a.debug {
         eprintln!("CSV ingest: {dur_ingest} µs   ({} rows)", plot.steps.len());
     }
     Renderer::full().render(&cfg, &plot)
 }
 
-pub fn demo(a: DemoArgs) -> Result<(), GraphError> {
+pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
     use crate::core::bounds::{self, Axis};
     use crate::core::data::BRAILLE_HORIZONTAL_RESOLUTION;
 
@@ -66,7 +66,7 @@ pub fn demo(a: DemoArgs) -> Result<(), GraphError> {
 
     for i in 0..points_needed.min(a.steps) {
         if i > 0 {
-            x += a.mu * a.dt + a.sigma * rng.randn() * a.dt.sqrt();
+            x += a.mu.mul_add(a.dt, a.sigma * rng.randn() * a.dt.sqrt());
         }
         data.push(DataTimeStep {
             time: i as f64 * a.dt,
@@ -83,7 +83,7 @@ pub fn demo(a: DemoArgs) -> Result<(), GraphError> {
     while i < a.steps {
         // Append the next point
         let dw = rng.randn() * a.dt.sqrt();
-        x += a.mu * a.dt + a.sigma * dw;
+        x += a.mu.mul_add(a.dt, a.sigma * dw);
         data.push(DataTimeStep {
             time: i as f64 * a.dt,
             min: x,
@@ -104,10 +104,8 @@ pub fn demo(a: DemoArgs) -> Result<(), GraphError> {
         let y_chars = (term.1.0 as usize).saturating_sub(4).max(MIN_GRAPH_HEIGHT);
         let max_pts = x_chars * BRAILLE_HORIZONTAL_RESOLUTION;
 
-        if a.scroll {
-            if data.len() > max_pts {
-                data.drain(..data.len() - max_pts);
-            }
+        if a.scroll && data.len() > max_pts {
+            data.drain(..data.len() - max_pts);
         }
 
         let cfg = Config::builder(x_chars, y_chars)
@@ -124,7 +122,7 @@ pub fn demo(a: DemoArgs) -> Result<(), GraphError> {
         } else {
             filter_and_bin(data.clone(), &cfg)
         };
-        let plot = preprocess_to_braille(vis, &cfg, true)?;
+        let plot = preprocess_to_braille(&vis, &cfg, true)?;
         renderer.render(&cfg, &plot)?;
 
         std::thread::sleep(frame_pause);

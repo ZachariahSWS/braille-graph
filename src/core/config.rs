@@ -17,6 +17,7 @@ pub struct Config {
 
 impl Config {
     #[inline]
+    #[must_use]
     pub fn builder(x_chars: usize, y_chars: usize) -> ConfigBuilder {
         ConfigBuilder::new(x_chars, y_chars)
     }
@@ -36,6 +37,7 @@ pub struct ConfigBuilder {
 }
 
 impl ConfigBuilder {
+    #[must_use]
     pub(crate) fn new(x_chars: usize, y_chars: usize) -> Self {
         Self {
             x_chars,
@@ -50,44 +52,52 @@ impl ConfigBuilder {
     }
 
     #[inline]
+    #[must_use]
     pub fn title(mut self, t: impl Into<String>) -> Self {
         self.title = Some(t.into());
         self
     }
     #[inline]
+    #[must_use]
     pub fn subtitle(mut self, s: impl Into<String>) -> Self {
         self.subtitle = Some(s.into());
         self
     }
     #[inline]
+    #[must_use]
     pub fn subtitle_opt(mut self, s: &Option<String>) -> Self {
         if let Some(t) = s {
-            self.subtitle = Some(t.clone())
+            self.subtitle = Some(t.clone());
         }
         self
     }
     #[inline]
+    #[must_use]
     pub fn y_min(mut self, v: f64) -> Self {
         self.y_min = Some(v);
         self
     }
     #[inline]
+    #[must_use]
     pub fn y_max(mut self, v: f64) -> Self {
         self.y_max = Some(v);
         self
     }
     #[inline]
+    #[must_use]
     pub fn y_range(mut self, r: std::ops::RangeInclusive<f64>) -> Self {
         self.y_min = Some(*r.start());
         self.y_max = Some(*r.end());
         self
     }
     #[inline]
+    #[must_use]
     pub fn x_range(mut self, lo: f64, hi: f64) -> Self {
         self.x_range = Some((lo, hi));
         self
     }
     #[inline]
+    #[must_use]
     pub fn color<C: Into<AnsiCode>>(mut self, c: C) -> Self {
         self.color = Some(c.into());
         self

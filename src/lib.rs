@@ -44,6 +44,6 @@ pub fn plot_data(
         .build()?;
 
     data = filter_and_bin(data, &cfg);
-    let plot = preprocess_to_braille(data, &cfg, cumulative)?;
+    let plot = preprocess_to_braille(&data, &cfg, cumulative)?;
     Renderer::full().render(&cfg, &plot)
 }

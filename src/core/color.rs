@@ -16,39 +16,59 @@ pub enum AnsiCode {
 }
 
 impl AnsiCode {
+    #[must_use]
+    #[inline]
     pub const fn black() -> Self {
         Self::Static("\x1b[30m")
     }
+    #[must_use]
+    #[inline]
     pub const fn red() -> Self {
         Self::Static("\x1b[31m")
     }
+    #[must_use]
+    #[inline]
     pub const fn green() -> Self {
         Self::Static("\x1b[32m")
     }
+    #[must_use]
+    #[inline]
     pub const fn yellow() -> Self {
         Self::Static("\x1b[33m")
     }
+    #[must_use]
+    #[inline]
     pub const fn blue() -> Self {
         Self::Static("\x1b[34m")
     }
+    #[must_use]
+    #[inline]
     pub const fn magenta() -> Self {
         Self::Static("\x1b[35m")
     }
+    #[must_use]
+    #[inline]
     pub const fn cyan() -> Self {
         Self::Static("\x1b[36m")
     }
+    #[must_use]
+    #[inline]
     pub const fn white() -> Self {
         Self::Static("\x1b[37m")
     }
+    #[must_use]
+    #[inline]
     pub const fn industrial_orange() -> Self {
         Self::Static("\x1b[38;2;210;135;10m")
     }
+    #[must_use]
     #[inline]
     pub const fn reset() -> Self {
         Self::Static("\x1b[0m")
     }
 
     /// True-color escape `ESC[38;2;R;G;Bm`.
+    #[must_use]
     pub fn rgb(r: u8, g: u8, b: u8) -> Self {
         let mut buf = [0u8; 20];
         buf[..7].copy_from_slice(b"\x1b[38;2;");

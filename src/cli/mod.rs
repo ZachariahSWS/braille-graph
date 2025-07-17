@@ -14,7 +14,7 @@ pub fn run() -> Result<(), GraphError> {
             handlers::colors();
             Ok(())
         }
-        parse::Command::Demo(a) => handlers::demo(a),
+        parse::Command::Demo(a) => handlers::demo(&a),
         parse::Command::Examples => {
             handlers::examples();
             Ok(())

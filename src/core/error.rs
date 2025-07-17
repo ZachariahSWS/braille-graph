@@ -13,10 +13,9 @@ pub enum ConfigError {
 
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use ConfigError::*;
         match self {
-            MissingField(x) => write!(f, "configuration missing field `{x}`"),
-            InvalidRange { lo, hi } => write!(f, "y_min {lo} must be < y_max {hi}"),
+            ConfigError::MissingField(x) => write!(f, "configuration missing field `{x}`"),
+            ConfigError::InvalidRange { lo, hi } => write!(f, "y_min {lo} must be < y_max {hi}"),
         }
     }
 }
@@ -40,23 +39,21 @@ pub enum GraphError {
 
 impl fmt::Display for GraphError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use GraphError::*;
         match self {
-            Io(e) => write!(f, "{e}"),
-            Csv(e) => write!(f, "{e}"),
-            Color(e) => write!(f, "{e}"),
-            Config(e) => write!(f, "{e}"),
-            GraphTooSmall {
+            GraphError::Io(e) => write!(f, "{e}"),
+            GraphError::Csv(e) => write!(f, "{e}"),
+            GraphError::Color(e) => write!(f, "{e}"),
+            GraphError::Config(e) => write!(f, "{e}"),
+            GraphError::GraphTooSmall {
                 want_w,
                 want_h,
                 got_w,
                 got_h,
             } => write!(
                 f,
-                "terminal too small: need ≥{}×{}, got {}×{}",
-                want_w, want_h, got_w, got_h
+                "terminal too small: need ≥{want_w}×{want_h}, got {got_w}×{got_h}"
             ),
-            EmptyData => write!(f, "data set is empty"),
+            GraphError::EmptyData => write!(f, "data set is empty"),
         }
     }
 }

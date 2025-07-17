@@ -3,6 +3,10 @@ name = "braille-graph"
 version = "0.1.0"
 edition = "2024"
 
+[lints.clippy]
+pedantic = "warn"
+cargo = "warn"
+
 [dependencies]
 lexical-core = "1.0.5"
 clap = { version = "4.0", features = ["derive"] }

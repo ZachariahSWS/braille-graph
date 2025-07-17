@@ -65,7 +65,7 @@ fn push_centered(buf: &mut String, text: &str, width: usize, color: &AnsiCode) {
     buf.push_str(&H.repeat(pad_right));
 }
 
-/// Map two half-columns at (char_idx,row) to a single Unicode braille scalar.
+/// Map two half-columns at (`char_idx`,`row`) to a single Unicode braille scalar.
 #[inline]
 fn braille_char(char_idx: usize, row: usize, plot: &BraillePlot) -> char {
     let left = char_idx * 2;
@@ -83,13 +83,13 @@ fn braille_char(char_idx: usize, row: usize, plot: &BraillePlot) -> char {
     };
 
     if let Some(s) = plot.steps.get(left) {
-        stamp(s, 0)
+        stamp(s, 0);
     }
     if let Some(s) = plot.steps.get(right) {
-        stamp(s, 1)
+        stamp(s, 1);
     }
 
-    char::from_u32(BRAILLE_UNICODE_BASE + mask as u32).unwrap()
+    char::from_u32(BRAILLE_UNICODE_BASE + u32::from(mask)).unwrap()
 }
 
 /// Render a complete frame into a single `String`.
@@ -120,9 +120,9 @@ pub fn build_frame(cfg: &Config, plot: &BraillePlot) -> Result<String, GraphErro
     for row in 0..cfg.y_chars {
         out.push_str(V);
         if row == 0 {
-            out.push_str(&format!("{:>lbl_w$}", hi_lbl));
+            out.push_str(&format!("{hi_lbl:>lbl_w$}"));
         } else if row + 1 == cfg.y_chars {
-            out.push_str(&format!("{:>lbl_w$}", lo_lbl));
+            out.push_str(&format!("{lo_lbl:>lbl_w$}"));
         } else {
             out.push_str(&" ".repeat(lbl_w));
         }
@@ -183,12 +183,14 @@ pub struct Renderer {
 
 impl Renderer {
     #[inline]
+    #[must_use]
     pub fn full() -> Self {
         Self {
             strat: Strategy::Full,
         }
     }
     #[inline]
+    #[must_use]
     pub fn delta() -> Self {
         Self {
             strat: Strategy::Delta {
@@ -218,12 +220,12 @@ impl Renderer {
                 let mut row = 1usize;
                 for line in frame.lines() {
                     let h = hash64(line);
-                    if prev_hash.get(row - 1).map_or(true, |&p| p != h) {
+                    if prev_hash.get(row - 1).is_none_or(|&p| p != h) {
                         write!(term, "\x1b[{row};1H{line}")?;
                         if row > prev_hash.len() {
-                            prev_hash.push(h)
+                            prev_hash.push(h);
                         } else {
-                            prev_hash[row - 1] = h
+                            prev_hash[row - 1] = h;
                         }
                     }
                     row += 1;

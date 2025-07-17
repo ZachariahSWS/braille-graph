@@ -34,11 +34,12 @@ pub enum ParseErrorKind {
 
 impl Display for ParseCsvError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use ParseErrorKind::*;
         match &self.kind {
-            Io(e) => write!(f, "I/O error on line {}: {}", self.line, e),
-            BadColumnCount(n) => write!(f, "line {}: expected 2–3 columns, got {}", self.line, n),
-            BadFloat { field, text } => {
+            ParseErrorKind::Io(e) => write!(f, "I/O error on line {}: {}", self.line, e),
+            ParseErrorKind::BadColumnCount(n) => {
+                write!(f, "line {}: expected 2–3 columns, got {}", self.line, n)
+            }
+            ParseErrorKind::BadFloat { field, text } => {
                 write!(f, "line {}: invalid {} value '{}'", self.line, field, text)
             }
         }
@@ -86,7 +87,9 @@ fn parse_f64(bytes: &[u8], line: usize, field: &'static str) -> Result<f64, Pars
             text: String::from_utf8_lossy(bytes).into_owned(),
         },
     })?;
-    if !val.is_finite() {
+    if val.is_finite() {
+        Ok(val)
+    } else {
         Err(ParseCsvError {
             line,
             kind: ParseErrorKind::BadFloat {
@@ -94,8 +97,6 @@ fn parse_f64(bytes: &[u8], line: usize, field: &'static str) -> Result<f64, Pars
                 text: "NaN".into(),
             },
         })
-    } else {
-        Ok(val)
     }
 }
 
@@ -149,8 +150,7 @@ pub fn read_csv_fast<R: Read>(src: R) -> Result<Vec<DataTimeStep>, ParseCsvError
             let end = buf[start..]
                 .iter()
                 .position(|&b| b == b',')
-                .map(|p| start + p)
-                .unwrap_or(buf.len());
+                .map_or(buf.len(), |p| start + p);
             if idx < 3 {
                 cols[idx] = Some(trim(&buf[start..end]));
                 idx += 1;

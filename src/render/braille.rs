@@ -51,7 +51,7 @@ pub fn filter_and_bin(mut v: Vec<DataTimeStep>, cfg: &Config) -> Vec<DataTimeSte
 /// Convert `DataTimeStep` list into pixel coordinates + optional cumulative
 /// bridging.
 pub fn preprocess_to_braille(
-    v: Vec<DataTimeStep>,
+    v: &[DataTimeStep],
     cfg: &Config,
     cumulative: bool,
 ) -> Result<BraillePlot, GraphError> {

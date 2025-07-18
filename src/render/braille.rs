@@ -48,12 +48,11 @@ pub fn filter_and_bin(mut v: Vec<DataTimeStep>, cfg: &Config) -> Vec<DataTimeSte
     out
 }
 
-/// Convert `DataTimeStep` list into pixel coordinates + optional cumulative
-/// bridging.
+/// Convert `DataTimeStep` list into pixel coordinates + optional bridging.
 pub fn preprocess_to_braille(
     v: &[DataTimeStep],
     cfg: &Config,
-    cumulative: bool,
+    bridge: bool,
 ) -> Result<BraillePlot, GraphError> {
     if v.is_empty() {
         return Err(GraphError::EmptyData);
@@ -76,7 +75,7 @@ pub fn preprocess_to_braille(
     };
 
     let mut steps: Vec<_> = v.iter().map(map).collect();
-    if cumulative {
+    if bridge {
         // Build a *new* vector so each segment only spans (i-1 … i).
         let mut bridged = Vec::with_capacity(steps.len());
         bridged.push(steps[0].clone()); // first point untouched

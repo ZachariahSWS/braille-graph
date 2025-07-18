@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 /// Top-level CLI structure.
 #[derive(Parser)]
 #[command(
-    name = "cli-graph",
+    name = "braille-graph",
     about = "High-resolution terminal plotting using braille"
 )]
 pub struct Cli {
@@ -24,7 +24,7 @@ pub enum Command {
     Examples,
 }
 
-/// `cli-graph csv …`
+/// `braille-graph csv …`
 #[derive(Parser, Debug)]
 pub struct CsvArgs {
     /// CSV path (use `-` for stdin)
@@ -57,9 +57,9 @@ pub struct CsvArgs {
     #[arg(long, default_value = "industrial", value_parser = parse_ansi)]
     pub color: AnsiCode,
 
-    /// Bridge min/max envelopes cumulatively
+    /// Bridge min/max envelopes
     #[arg(long)]
-    pub cumulative: bool,
+    pub bridge: bool,
 
     /// Emit timing diagnostics
     #[arg(long)]
@@ -70,7 +70,7 @@ pub struct CsvArgs {
     pub sort: bool,
 }
 
-/// `cli-graph demo …`
+/// `braille-graph demo …`
 #[derive(Parser, Debug)]
 pub struct DemoArgs {
     #[arg(long, default_value_t = 2000)]

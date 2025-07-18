@@ -11,11 +11,11 @@ pub const BRAILLE_VERTICAL_RESOLUTION: usize = 4;
 pub const DECIMAL_PRECISION: usize = 1;
 
 // --- Public Row Structs ---
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct DataTimeStep {
     pub time: f64,
-    pub max: f64,
     pub min: f64,
+    pub max: f64,
 }
 
 // --- Error Handling ---

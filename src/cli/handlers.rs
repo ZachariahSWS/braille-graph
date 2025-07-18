@@ -41,7 +41,7 @@ pub fn csv(a: CsvArgs) -> Result<(), GraphError> {
 
     // transform + render
     data = filter_and_bin(data, &cfg);
-    let plot = preprocess_to_braille(&data, &cfg, a.cumulative)?;
+    let plot = preprocess_to_braille(&data, &cfg, a.bridge)?;
     if a.debug {
         eprintln!("CSV ingest: {dur_ingest} µs   ({} rows)", plot.steps.len());
     }
@@ -188,7 +188,7 @@ pub fn examples() {
 Example invocations
 -------------------
 • Basic CSV        : {bin} csv sample_data/industrial_production.csv
-• Cumulative plot  : {bin} csv sample_data/industrial_production.csv --cumulative
+• Connected plot  : {bin} csv sample_data/industrial_production.csv --bridge
 • Named color     : {bin} csv sample_data/industrial_production.csv --color blue
 • Hex color       : {bin} csv sample_data/industrial_production.csv --color #6048c1
 • Custom title     : {bin} csv sample_data/industrial_production.csv \\

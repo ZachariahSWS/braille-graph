@@ -76,11 +76,17 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
     }
 
     // Render loop
-    let mut renderer = Renderer::delta();
-    let frame_pause = std::time::Duration::from_millis(1_000 / a.fps.max(1));
+    let mut renderer = Renderer::full();
+    let demo_start = Instant::now();
+    let mut total_render_us: u128 = 0;
+    let mut total_setup_us: u128 = 0;
+    let mut total_processing_us: u128 = 0;
+    let mut frame_no: usize = 0;
+    let frame_pause = std::time::Duration::from_micros(1_000_000 / a.fps.max(1));
     let mut i = data.len();
 
     while i < a.steps {
+        let t0 = Instant::now();
         // Append the next point
         let dw = rng.randn() * a.dt.sqrt();
         x += a.mu.mul_add(a.dt, a.sigma * dw);
@@ -116,6 +122,10 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
             .x_range(data.first().unwrap().time, data.last().unwrap().time)
             .build()?;
 
+        let setup_us = t0.elapsed().as_micros();
+        total_setup_us += setup_us;
+
+        let t1 = Instant::now();
         // Apply optional binning
         let vis = if a.scroll {
             data.clone()
@@ -123,9 +133,26 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
             filter_and_bin(data.clone(), &cfg)
         };
         let plot = preprocess_to_braille(&vis, &cfg, true)?;
+        let processing_us = t1.elapsed().as_micros();
+        total_processing_us += processing_us;
+
+        let t2 = Instant::now();
         renderer.render(&cfg, &plot)?;
+        let render_us = t2.elapsed().as_micros();
+        total_render_us += render_us;
+        frame_no += 1;
 
         std::thread::sleep(frame_pause);
+    }
+
+    if a.debug && frame_no > 0 {
+        let total_us = demo_start.elapsed().as_micros();
+        eprintln!(
+            "demo complete: {frame_no} frames   total {total_us} µs\n   avg render {:.1} µs   avg setup {:.1}µs   avg processing {:.1}µs",
+            total_render_us as f64 / frame_no as f64,
+            total_setup_us as f64 / frame_no as f64,
+            total_processing_us as f64 / frame_no as f64,
+        );
     }
     Ok(())
 }

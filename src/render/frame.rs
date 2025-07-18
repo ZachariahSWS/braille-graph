@@ -171,14 +171,12 @@ enum Strategy {
     /// Replace every character in the graph
     Full,
     /// Replace only the lines that changed.
-    Delta {
-        prev_hash: Vec<u64>,
-        first_frame: bool,
-    },
+    Delta { prev_hash: Vec<u64> },
 }
 
 pub struct Renderer {
     strat: Strategy,
+    first_frame: bool,
 }
 
 impl Renderer {
@@ -187,6 +185,7 @@ impl Renderer {
     pub fn full() -> Self {
         Self {
             strat: Strategy::Full,
+            first_frame: true,
         }
     }
     #[inline]
@@ -195,26 +194,29 @@ impl Renderer {
         Self {
             strat: Strategy::Delta {
                 prev_hash: Vec::new(),
-                first_frame: true,
             },
+            first_frame: true,
         }
     }
 
     pub fn render(&mut self, cfg: &Config, plot: &BraillePlot) -> Result<(), GraphError> {
         let frame = build_frame(cfg, plot)?;
+        let mut term = stdout().lock();
+        let _cursor = CursorGuard::new();
         match &mut self.strat {
             Strategy::Full => {
-                stdout().lock().write_all(frame.as_bytes())?;
+                if self.first_frame {
+                    write!(term, "\x1b[2J\x1b[H")?;
+                    self.first_frame = false;
+                } else {
+                    write!(term, "\x1b[H")?;
+                }
+                term.write_all(frame.as_bytes())?;
             }
-            Strategy::Delta {
-                prev_hash,
-                first_frame,
-            } => {
-                let mut term = stdout().lock();
-                let _cursor = CursorGuard::new();
-                if *first_frame {
-                    write!(term, "\x1b[2J\x1b[H")?; // hide cursor + clear
-                    *first_frame = false;
+            Strategy::Delta { prev_hash } => {
+                if self.first_frame {
+                    write!(term, "\x1b[2J\x1b[H")?;
+                    self.first_frame = false;
                 }
 
                 let mut row = 1usize;
@@ -238,20 +240,9 @@ impl Renderer {
                 // Park cursor *below* the frame
                 // If this is the last frame, nothing gets cut off
                 write!(term, "\x1b[{row};1H")?;
-                term.flush()?;
             }
         }
+        term.flush()?;
         Ok(())
-    }
-}
-
-impl Drop for Renderer {
-    fn drop(&mut self) {
-        if let Strategy::Delta {
-            first_frame: false, ..
-        } = self.strat
-        {
-            let _ = write!(stdout(), "\x1b[?25h");
-        }
     }
 }

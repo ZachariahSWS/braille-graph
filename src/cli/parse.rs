@@ -90,4 +90,6 @@ pub struct DemoArgs {
         help = "Scroll instead of bin when the series exceeds screen width"
     )]
     pub scroll: bool,
+    #[arg(long, default_value_t = false, help = "Emit timing diagnostics")]
+    pub debug: bool,
 }

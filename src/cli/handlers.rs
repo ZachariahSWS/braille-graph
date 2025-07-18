@@ -76,13 +76,13 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
     }
 
     // Render loop
-    let mut renderer = Renderer::full();
+    let mut renderer = Renderer::delta();
+    let frame_pause = std::time::Duration::from_micros(1_000_000 / a.fps.max(1));
     let demo_start = Instant::now();
     let mut total_render_us: u128 = 0;
     let mut total_setup_us: u128 = 0;
     let mut total_processing_us: u128 = 0;
     let mut frame_no: usize = 0;
-    let frame_pause = std::time::Duration::from_micros(1_000_000 / a.fps.max(1));
     let mut i = data.len();
 
     while i < a.steps {

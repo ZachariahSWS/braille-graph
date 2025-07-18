@@ -199,26 +199,25 @@ impl Renderer {
         }
     }
 
+    /// Calls `build_frame` and either renders it in full or only
+    /// the lines that changed with delta.
+    ///
+    /// If using `Renderer::delta`, hash collision leads to an
+    /// unnecessary redraw but no corruption.
     pub fn render(&mut self, cfg: &Config, plot: &BraillePlot) -> Result<(), GraphError> {
         let frame = build_frame(cfg, plot)?;
         let mut term = stdout().lock();
         let _cursor = CursorGuard::new();
+        if self.first_frame {
+            write!(term, "\x1b[2J")?;
+            self.first_frame = false;
+        }
         match &mut self.strat {
             Strategy::Full => {
-                if self.first_frame {
-                    write!(term, "\x1b[2J\x1b[H")?;
-                    self.first_frame = false;
-                } else {
-                    write!(term, "\x1b[H")?;
-                }
+                write!(term, "\x1b[H")?;
                 term.write_all(frame.as_bytes())?;
             }
             Strategy::Delta { prev_hash } => {
-                if self.first_frame {
-                    write!(term, "\x1b[2J\x1b[H")?;
-                    self.first_frame = false;
-                }
-
                 let mut row = 1usize;
                 for line in frame.lines() {
                     let h = hash64(line);

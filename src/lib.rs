@@ -20,7 +20,7 @@ pub use render::{
 pub fn plot_data(
     mut data: Vec<DataTimeStep>,
     title: &str,
-    color: &str,
+    color: AnsiCode,
     cumulative: bool,
 ) -> Result<(), GraphError> {
     use core::bounds::{Axis, graph_dims, terminal_geometry};

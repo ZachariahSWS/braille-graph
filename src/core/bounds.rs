@@ -51,9 +51,11 @@ pub fn terminal_geometry() -> (Width, Height) {
 #[inline]
 #[must_use]
 pub fn graph_dims((w, h): (Width, Height), samples: usize) -> (usize, usize) {
-    let x_chars = (samples / BRAILLE_HORIZONTAL_RESOLUTION)
-        .min(w.0 as usize - BORDER_WIDTH - LABEL_GUTTER - 1);
-    let y_chars = (h.0 as usize).saturating_sub(4).max(MIN_GRAPH_HEIGHT);
+    let x_chars = std::cmp::min(
+        samples / BRAILLE_HORIZONTAL_RESOLUTION,
+        (w.0 as usize).saturating_sub(BORDER_WIDTH + LABEL_GUTTER + 1),
+    );
+    let y_chars = std::cmp::max(MIN_GRAPH_HEIGHT, (h.0 as usize).saturating_sub(4));
     (x_chars, y_chars)
 }
 

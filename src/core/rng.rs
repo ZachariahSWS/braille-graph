@@ -29,7 +29,7 @@ impl Lcg {
     }
     #[inline]
     fn next_f64(&mut self) -> f64 {
-        f64::from(self.next_u32()) / (f64::from(u32::MAX))
+        (f64::from(self.next_u32()) + 0.5) / (f64::from(u32::MAX) + 1.0)
     }
 
     /// Standard normal 𝒩(0, 1) sample.

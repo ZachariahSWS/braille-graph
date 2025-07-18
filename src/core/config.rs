@@ -98,8 +98,8 @@ impl ConfigBuilder {
     }
     #[inline]
     #[must_use]
-    pub fn color<C: Into<AnsiCode>>(mut self, c: C) -> Self {
-        self.color = Some(c.into());
+    pub fn color(mut self, c: AnsiCode) -> Self {
+        self.color = Some(c);
         self
     }
 

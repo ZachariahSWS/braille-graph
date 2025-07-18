@@ -30,7 +30,7 @@ pub fn csv(a: CsvArgs) -> Result<(), GraphError> {
     let mut b = Config::builder(x_chars, y_chars)
         .title(a.title)
         .subtitle_opt(&a.subtitle)
-        .color(&a.color)
+        .color(a.color)
         .y_min(a.y_min.unwrap_or(y_lo))
         .y_max(a.y_max.unwrap_or(y_hi));
 
@@ -117,7 +117,7 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
         let cfg = Config::builder(x_chars, y_chars)
             .title("Itô Process Demo")
             .subtitle(format!("μ = {},  σ = {}", a.mu, a.sigma))
-            .color(&a.color)
+            .color(a.color)
             .y_range(y_lo..=y_hi)
             .x_range(data.first().unwrap().time, data.last().unwrap().time)
             .build()?;

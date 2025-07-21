@@ -1,10 +1,6 @@
 //! Build a full-screen braille frame and flush to the terminal.
 
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-    io::{Write, stdout},
-};
+use std::io::{Write, stdout};
 
 use crate::{
     core::{
@@ -42,9 +38,14 @@ const V: &str = "│";
 // Utilities
 #[inline]
 fn hash64(s: &str) -> u64 {
-    let mut h = DefaultHasher::new();
-    s.hash(&mut h);
-    h.finish()
+    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+    const FNV_PRIME: u64 = 0x00000100000001B3;
+    let mut h = FNV_OFFSET;
+    for &b in s.as_bytes() {
+        h ^= b as u64;
+        h = h.wrapping_mul(FNV_PRIME);
+    }
+    h
 }
 
 /// Write centred colored text between horizontal rules.

@@ -100,7 +100,7 @@ fn parse_f64(bytes: &[u8], line: usize, field: &'static str) -> Result<f64, Pars
     }
 }
 
-// --- fast CSV ingest ---
+// --- Fast CSV ingest ---
 const BUF_CAP: usize = 1 << 20; // 1 MiB
 
 pub fn read_csv_fast<R: Read>(src: R) -> Result<Vec<DataTimeStep>, ParseCsvError> {

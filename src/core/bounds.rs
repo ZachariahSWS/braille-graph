@@ -2,8 +2,10 @@
 
 use terminal_size::{Height, Width, terminal_size};
 
-use crate::core::data::{BRAILLE_HORIZONTAL_RESOLUTION, DataTimeStep};
-use crate::render::{BORDER_WIDTH, LABEL_GUTTER, MIN_GRAPH_HEIGHT};
+use crate::core::{
+    constants::{BORDER_WIDTH, BRAILLE_HORIZONTAL_RESOLUTION, LABEL_GUTTER, MIN_GRAPH_HEIGHT},
+    data::DataTimeStep,
+};
 
 /// Which axis we’re measuring.
 pub enum Axis {

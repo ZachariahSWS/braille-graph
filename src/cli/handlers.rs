@@ -1,15 +1,18 @@
 use std::time::Instant;
 
 use crate::{
-    DECIMAL_PRECISION, MIN_GRAPH_HEIGHT, MIN_GRAPH_WIDTH,
     core::{
         bounds::{Axis, graph_dims, terminal_geometry},
         config::Config,
+        constants::{
+            BORDER_WIDTH, BRAILLE_HORIZONTAL_RESOLUTION, DECIMAL_PRECISION, LABEL_GUTTER,
+            MIN_GRAPH_HEIGHT, MIN_GRAPH_WIDTH,
+        },
         data::{DataTimeStep, read_csv_from_path},
         error::GraphError,
         rng::Lcg,
     },
-    render::{BORDER_WIDTH, LABEL_GUTTER, Renderer, filter_and_bin, preprocess_to_braille},
+    render::{Renderer, filter_and_bin, preprocess_to_braille},
 };
 
 use super::parse::{CsvArgs, DemoArgs};
@@ -50,7 +53,6 @@ pub fn csv(a: CsvArgs) -> Result<(), GraphError> {
 
 pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
     use crate::core::bounds::{self, Axis};
-    use crate::core::data::BRAILLE_HORIZONTAL_RESOLUTION;
 
     // RNG + first samples
     let mut rng = Lcg::seed_from_time();

@@ -9,6 +9,9 @@ impl Lcg {
     pub fn seed(seed: u64) -> Self {
         Self(seed)
     }
+
+    #[allow(clippy::cast_possible_truncation)]
+    #[must_use]
     pub fn seed_from_time() -> Self {
         use std::time::{SystemTime, UNIX_EPOCH};
         Self(

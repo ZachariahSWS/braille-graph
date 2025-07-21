@@ -6,7 +6,9 @@ use crate::{
     core::{
         color::{AnsiCode, colorize},
         config::Config,
-        data::DECIMAL_PRECISION,
+        constants::{
+            BORDER_WIDTH, DECIMAL_PRECISION, LABEL_GUTTER, MIN_GRAPH_HEIGHT, MIN_GRAPH_WIDTH,
+        },
         error::GraphError,
     },
     render::braille::{BraillePlot, GraphTimeStep},
@@ -20,11 +22,7 @@ pub(crate) const BRAILLE_DOT_POSITIONS: [[u8; 4]; 2] = [
 pub(crate) const BRAILLE_UNICODE_BASE: u32 = 0x2800;
 
 // Layout constants
-pub const MIN_GRAPH_HEIGHT: usize = 7;
-pub const MIN_GRAPH_WIDTH: usize = 14;
 
-pub const BORDER_WIDTH: usize = 2;
-pub const LABEL_GUTTER: usize = 1;
 const TITLE_PADDING: usize = 3;
 
 // Box-drawing glyphs
@@ -38,11 +36,11 @@ const V: &str = "│";
 // Utilities
 #[inline]
 fn hash64(s: &str) -> u64 {
-    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
-    const FNV_PRIME: u64 = 0x00000100000001B3;
+    const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const FNV_PRIME: u64 = 0x0000_0100_0000_01B3;
     let mut h = FNV_OFFSET;
     for &b in s.as_bytes() {
-        h ^= b as u64;
+        h ^= u64::from(b);
         h = h.wrapping_mul(FNV_PRIME);
     }
     h

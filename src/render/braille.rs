@@ -1,8 +1,11 @@
+//! Turns raw data into character and subcharacter positioning with braille.
+
 use std::cmp::{max, min};
 
 use crate::core::{
     config::Config,
-    data::{BRAILLE_HORIZONTAL_RESOLUTION, BRAILLE_VERTICAL_RESOLUTION, DataTimeStep},
+    constants::{BRAILLE_HORIZONTAL_RESOLUTION, BRAILLE_VERTICAL_RESOLUTION},
+    data::DataTimeStep,
     error::GraphError,
 };
 

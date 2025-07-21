@@ -6,10 +6,6 @@ use std::{
     io::{BufRead, BufReader, Read},
 };
 
-pub const BRAILLE_HORIZONTAL_RESOLUTION: usize = 2;
-pub const BRAILLE_VERTICAL_RESOLUTION: usize = 4;
-pub const DECIMAL_PRECISION: usize = 1;
-
 // --- Public Row Structs ---
 #[derive(Clone, Copy)]
 pub struct DataTimeStep {

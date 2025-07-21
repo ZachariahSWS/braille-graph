@@ -68,6 +68,7 @@ impl AnsiCode {
     }
 
     /// True-color escape `ESC[38;2;R;G;Bm`.
+    #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     pub fn rgb(r: u8, g: u8, b: u8) -> Self {
         let mut buf = [0u8; 20];
@@ -85,6 +86,7 @@ impl AnsiCode {
         len += 1;
         Self::Inline {
             buf,
+            // Truncation is impossible because maximum len is 20 which is less than 256
             len: len as u8,
         }
     }

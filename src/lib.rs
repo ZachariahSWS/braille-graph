@@ -7,13 +7,12 @@ pub mod render;
 pub use core::{
     color::{AnsiCode, ColorError, colorize},
     config::{Config, ConfigBuilder},
-    data::{DECIMAL_PRECISION, DataTimeStep},
+    constants::{DECIMAL_PRECISION, MIN_GRAPH_HEIGHT, MIN_GRAPH_WIDTH},
+    data::DataTimeStep,
     error::{ConfigError, GraphError},
 };
 
-pub use render::{
-    MIN_GRAPH_HEIGHT, MIN_GRAPH_WIDTH, Renderer, filter_and_bin, preprocess_to_braille,
-};
+pub use render::{Renderer, filter_and_bin, preprocess_to_braille};
 
 /// Convenience function kept for backwards compatibility.  Plots a **static**
 /// in-memory data set with automatic axis scaling.

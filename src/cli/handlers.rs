@@ -12,7 +12,7 @@ use crate::{
         error::GraphError,
         rng::Lcg,
     },
-    render::{Renderer, filter_and_bin, preprocess_to_braille},
+    render::{Binner, Renderer, Strategy, preprocess_to_braille},
 };
 
 use super::parse::{CsvArgs, DemoArgs};
@@ -43,8 +43,9 @@ pub fn csv(a: CsvArgs) -> Result<(), GraphError> {
     let cfg = b.build()?;
 
     // transform + render
-    data = filter_and_bin(data, &cfg);
-    let plot = preprocess_to_braille(&data, &cfg, a.bridge)?;
+    let mut binner = Binner::new(Strategy::Index);
+    let binned = binner.bin(&data, &cfg);
+    let plot = preprocess_to_braille(&binned, &cfg, a.bridge)?;
     if a.debug {
         eprintln!("CSV ingest: {dur_ingest} µs   ({} rows)", plot.steps.len());
     }
@@ -65,19 +66,21 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
     let cols_available = term.0.0 as usize - BORDER_WIDTH - LABEL_GUTTER - label_w - 1; // safety margin
     let char_cols = cols_available.max(MIN_GRAPH_WIDTH);
     let points_needed = char_cols * BRAILLE_HORIZONTAL_RESOLUTION;
+    let dt = 1.0 / a.fps as f64;
 
     for i in 0..points_needed.min(a.steps) {
         if i > 0 {
-            x += a.mu.mul_add(a.dt, a.sigma * rng.randn() * a.dt.sqrt());
+            x += a.mu.mul_add(dt, a.sigma * rng.randn() * dt.sqrt());
         }
         data.push(DataTimeStep {
-            time: i as f64 * a.dt,
+            time: i as f64 * dt,
             min: x,
             max: x,
         });
     }
 
     // Render loop
+    let mut binner = Binner::new(Strategy::Time);
     let mut renderer = Renderer::delta();
     let frame_pause = std::time::Duration::from_micros(1_000_000 / a.fps.max(1));
     let demo_start = Instant::now();
@@ -90,10 +93,10 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
     while i < a.steps {
         let t0 = Instant::now();
         // Append the next point
-        let dw = rng.randn() * a.dt.sqrt();
-        x += a.mu.mul_add(a.dt, a.sigma * dw);
+        let dw = rng.randn() * dt.sqrt();
+        x += a.mu.mul_add(dt, a.sigma * dw);
         data.push(DataTimeStep {
-            time: i as f64 * a.dt,
+            time: i as f64 * dt,
             min: x,
             max: x,
         });
@@ -129,12 +132,8 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
 
         let t1 = Instant::now();
         // Apply optional binning
-        let vis = if a.scroll {
-            data.clone()
-        } else {
-            filter_and_bin(data.clone(), &cfg)
-        };
-        let plot = preprocess_to_braille(&vis, &cfg, true)?;
+        let binned = binner.bin(&data, &cfg);
+        let plot = preprocess_to_braille(&binned, &cfg, true)?;
         let processing_us = t1.elapsed().as_micros();
         total_processing_us += processing_us;
 

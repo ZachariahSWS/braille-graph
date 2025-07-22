@@ -1,4 +1,4 @@
-use crate::AnsiCode;
+use crate::{AnsiCode, Strategy};
 use clap::{Parser, Subcommand};
 
 /// Top-level CLI structure.
@@ -27,63 +27,69 @@ pub enum Command {
 /// `braille-graph csv …`
 #[derive(Parser, Debug)]
 pub struct CsvArgs {
-    /// CSV path (use `-` for stdin)
-    #[arg(value_name = "FILE", default_value = "-")]
+    #[arg(
+        value_name = "FILE",
+        default_value = "-",
+        help = "CSV path (use `-` for stdin)"
+    )]
     pub file: String,
 
-    /// Graph title
-    #[arg(short, long, default_value = "CSV Data")]
+    #[arg(short, long, default_value = "CSV Data", help = "Graph title")]
     pub title: String,
 
-    /// Optional subtitle
-    #[arg(short, long)]
+    #[arg(short, long, help = "Optional subtitle")]
     pub subtitle: Option<String>,
 
-    /// Y-axis lower bound (auto if omitted)
-    #[arg(long)]
+    #[arg(long, help = "Y-axis lower bound (auto if omitted)")]
     pub y_min: Option<f64>,
-    /// Y-axis upper bound (auto if omitted)
-    #[arg(long)]
+    #[arg(long, help = "Y-axis upper bound (auto if omitted)")]
     pub y_max: Option<f64>,
 
-    /// X-axis lower bound
-    #[arg(long)]
+    #[arg(long, help = "X-axis lower bound (auto if omitted)")]
     pub x_min: Option<f64>,
-    /// X-axis upper bound
-    #[arg(long)]
+    #[arg(long, help = "X-axis upper bound (auto if omitted)")]
     pub x_max: Option<f64>,
 
-    /// Color (name or `#RRGGBB`)
-    #[arg(long, default_value = "industrial", value_parser = parse_ansi)]
+    #[arg(long, default_value = "industrial", value_parser = parse_ansi, help = "Color (name or `#RRGGBB`")]
     pub color: AnsiCode,
 
-    /// Bridge min/max envelopes
-    #[arg(long)]
+    #[arg(long, help = "Bridge min/max envelopes")]
     pub bridge: bool,
 
-    /// Emit timing diagnostics
-    #[arg(long)]
+    #[arg(long, help = "Emit timing diagnostics")]
     pub debug: bool,
 
-    /// Sort by timestamp before plotting
-    #[arg(long)]
+    #[arg(long, help = "Sort by timestep before plotting")]
     pub sort: bool,
+
+    #[arg(long, value_parser = parse_strategy, help = "Choose whether to bin the x_axis by index or time")]
+    pub bin_type: Strategy,
 }
 
 /// `braille-graph demo …`
 #[derive(Parser, Debug)]
 pub struct DemoArgs {
-    #[arg(long, default_value_t = 2000)]
+    #[arg(
+        long,
+        default_value_t = 2000,
+        help = "Number of steps before the process terminates"
+    )]
     pub steps: usize,
-    #[arg(long, default_value_t = 0.05)]
-    pub dt: f64,
-    #[arg(long, default_value_t = 0.0)]
+    #[arg(
+        long,
+        default_value_t = 0.0,
+        help = "The drift coefficient: positive means up, negative means down"
+    )]
     pub mu: f64,
-    #[arg(long, default_value_t = 1.0)]
+    #[arg(
+        long,
+        default_value_t = 1.0,
+        help = "The diffusion coefficient: higher means wider outcomes"
+    )]
     pub sigma: f64,
-    #[arg(long, default_value_t = 60)]
+    #[arg(long, default_value_t = 60, help = "Updates per second")]
     pub fps: u64,
-    #[arg(long, default_value = "industrial", value_parser = parse_ansi)]
+    #[arg(long, default_value = "industrial", value_parser = parse_ansi, help = "Use colors command for valid strings")]
     pub color: AnsiCode,
     #[arg(
         long,
@@ -110,5 +116,13 @@ fn parse_ansi(s: &str) -> Result<AnsiCode, String> {
         // hex literal
         _ if s.starts_with('#') => AnsiCode::from_hex(s).map_err(|e| e.to_string()),
         _ => Err(format!("unknown color '{s}' (try colors)")),
+    }
+}
+
+fn parse_strategy(s: &str) -> Result<Strategy, String> {
+    match s.to_ascii_lowercase().as_str() {
+        "index" => Ok(Strategy::Index),
+        "time" => Ok(Strategy::Time),
+        _ => Err(format!("unknown bin type '{s}' (try index or time)")),
     }
 }

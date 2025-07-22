@@ -17,5 +17,5 @@ pub const BRAILLE_VERTICAL_RESOLUTION: usize = 4;
 
 /// Numbers are rounded to the first decimal place.
 ///
-/// 14.832 becomes 14.8
-pub const DECIMAL_PRECISION: usize = 1;
+/// 14.837 becomes 14.84
+pub const DECIMAL_PRECISION: usize = 2;

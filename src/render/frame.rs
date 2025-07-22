@@ -41,8 +41,8 @@ fn hash64(s: &str) -> u64 {
     const FNV_PRIME: u64 = 0x0000_0100_0000_01B3;
     let mut h = FNV_OFFSET;
     for &b in s.as_bytes() {
-        h ^= u64::from(b);
         h = h.wrapping_mul(FNV_PRIME);
+        h ^= u64::from(b);
     }
     h
 }

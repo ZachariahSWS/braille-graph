@@ -47,7 +47,7 @@ pub fn csv(a: CsvArgs) -> Result<(), GraphError> {
     let cfg = b.build()?;
 
     // transform + render
-    let mut binner = Binner::new(Strategy::Index);
+    let mut binner = Binner::new(a.bin_type);
     let binned = binner.bin(&data, &cfg);
     let plot = preprocess_to_braille(&binned, &cfg, a.bridge)?;
     if a.debug {

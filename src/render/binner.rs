@@ -108,11 +108,20 @@ impl Binner {
 
     // --- Index Binning ---
 
+    /// Index-based binning with constant-time incremental updates.
+    ///
+    /// Works for the sliding-window pattern where the caller drops the
+    /// oldest sample and pushes one new sample each frame so that `data.len()`
+    /// stays constant.
+    ///
+    /// Safety note: all decrements are *checked*; the function never produces
+    /// negative indices (and therefore never wraps to `usize::MAX`).
     fn bin_index(&mut self, data: &[DataTimeStep]) -> Vec<DataTimeStep> {
         let n = data.len();
 
-        // Early-out: degenerate sizes
+        // Trivial / rebuild cases
         if n == 0 || self.target == 0 || n <= self.target {
+            // No binning needed or impossible
             self.cached = false;
             self.buckets.clear();
             self.last_len = n;
@@ -125,22 +134,24 @@ impl Binner {
             return self.build_full_index(data);
         }
 
-        // Fast-path detection: constant length & one-step scroll.
-        let scrolled = n == self.last_len
+        // Detect a one-step scroll with the same length.
+        let scrolled_one = n == self.last_len
             && self.prev_first_t.map_or(false, |prev| prev != data[0].time)
             && self
                 .prev_last_t
                 .map_or(false, |prev| prev == data[n - 2].time);
 
-        if !scrolled {
-            return self.build_full_index(data); // fall back
+        if !scrolled_one {
+            return self.build_full_index(data);
         }
 
-        // --- Incremental Update ---
-        // Shift bucket indices left by one; last bucket extends by one.
         for b in &mut self.buckets {
-            b.start -= 1;
-            b.end -= 1;
+            if b.start > 0 {
+                b.start -= 1;
+            }
+            if b.end > 0 {
+                b.end -= 1;
+            }
             if b.min_index > 0 {
                 b.min_index -= 1;
             }
@@ -148,44 +159,38 @@ impl Binner {
                 b.max_index -= 1;
             }
         }
-        if let Some(last) = self.buckets.last_mut() {
-            last.end += 1; // include new element
-            let new_index = n - 1;
-            let new_p = &data[new_index];
-            if new_p.min < last.min {
-                last.min = new_p.min;
-                last.min_index = new_index;
+
+        // Extend the last bucket to include the freshly appended sample.
+        {
+            let new_idx = n - 1;
+            let p_new = &data[new_idx];
+            let last = self.buckets.last_mut().unwrap();
+
+            last.end += 1;
+            if p_new.min < last.min {
+                last.min = p_new.min;
+                last.min_index = new_idx;
             }
-            if new_p.max > last.max {
-                last.max = new_p.max;
-                last.max_index = new_index;
+            if p_new.max > last.max {
+                last.max = p_new.max;
+                last.max_index = new_idx;
             }
         }
-        // First bucket: lost element may have held min/max.
+
+        // The first bucket may have lost its extrema when index 0 vanished.
         if let Some(first) = self.buckets.first_mut() {
-            let lost_min = first.min_index == 0;
-            let lost_max = first.max_index == 0;
+            let lost_min = first.min_index < first.start;
+            let lost_max = first.max_index < first.start;
             if lost_min || lost_max {
-                first.min = f64::INFINITY;
-                first.max = f64::NEG_INFINITY;
-                for index in first.start..first.end {
-                    let p = &data[index];
-                    if p.min < first.min {
-                        first.min = p.min;
-                        first.min_index = index;
-                    }
-                    if p.max > first.max {
-                        first.max = p.max;
-                        first.max_index = index;
-                    }
-                }
+                Self::recompute_extrema(first, data);
             }
         }
 
         self.prev_first_t = Some(data[0].time);
         self.prev_last_t = Some(data[n - 1].time);
         self.last_len = n;
-        self.emit(&data)
+
+        self.emit(data)
     }
 
     // --- Full Rebuild (Index) ---

@@ -23,6 +23,7 @@ pub(crate) const BRAILLE_UNICODE_BASE: u32 = 0x2800;
 
 // Layout constants
 
+/// Two spaces in front, one space behind
 const TITLE_PADDING: usize = 3;
 
 // Box-drawing glyphs
@@ -115,6 +116,12 @@ pub fn build_frame(cfg: &Config, plot: &BraillePlot) -> Result<String, GraphErro
     out.push_str(TR);
     out.push('\n');
 
+    // Top Padding
+    out.push_str(V);
+    out.push_str(&" ".repeat(line_len - BORDER_WIDTH));
+    out.push_str(V);
+    out.push_str("\n");
+
     // Graph rows
     for row in 0..cfg.y_chars {
         out.push_str(V);
@@ -135,6 +142,12 @@ pub fn build_frame(cfg: &Config, plot: &BraillePlot) -> Result<String, GraphErro
         out.push('\n');
     }
 
+    // Bottom Padding
+    out.push_str(V);
+    out.push_str(&" ".repeat(line_len - BORDER_WIDTH));
+    out.push_str(V);
+    out.push_str("\n");
+
     // Bottom bar
     out.push_str(BL);
     if let Some(sub) = &cfg.subtitle {
@@ -143,7 +156,7 @@ pub fn build_frame(cfg: &Config, plot: &BraillePlot) -> Result<String, GraphErro
         out.push_str(&H.repeat(line_len - BORDER_WIDTH));
     }
     out.push_str(BR);
-    out.push_str("\n\n");
+    out.push_str("\n");
     Ok(out)
 }
 

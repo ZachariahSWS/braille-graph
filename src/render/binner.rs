@@ -12,7 +12,7 @@
 //! loop {
 //!     data.remove(0);              // drop oldest
 //!     data.push(new_step);         // push newest
-//!     let binned = binner.bin(&data, &cfg);
+//!     let binned = binner.bin(&data, &config);
 //!     // render ...
 //! }
 //! ```
@@ -234,15 +234,15 @@ impl Binner {
 
     // --- Uniform Time Binning ---
 
-    fn bin_time(&mut self, data: &[DataTimeStep], cfg: &Config) -> Vec<DataTimeStep> {
+    fn bin_time(&mut self, data: &[DataTimeStep], config: &Config) -> Vec<DataTimeStep> {
         let n = data.len();
-        let target = cfg.x_chars * HR;
+        let target = config.x_chars * HR;
 
         // Full rebuild triggers
         let need_full = !self.cached
             || self.target != target
             || self.last_len != n
-            || cfg.x_range != self.last_xrange;
+            || config.x_range != self.last_xrange;
 
         if need_full {
             let t_lo = data.first().unwrap().time;
@@ -252,7 +252,7 @@ impl Binner {
             self.cached = true;
             self.target = target;
             self.last_len = n;
-            self.last_xrange = cfg.x_range;
+            self.last_xrange = config.x_range;
             self.win = Some(win);
             self.prev_first_t = Some(t_lo);
             self.prev_last_t = Some(t_hi);
@@ -350,16 +350,15 @@ impl Binner {
 
     fn build_full_time(&mut self, data: &[DataTimeStep], win: f64) -> Vec<DataTimeStep> {
         let target = self.target;
-        let t_lo = data.first().unwrap().time;
 
         self.buckets.clear();
         let mut out: Vec<DataTimeStep> = Vec::with_capacity(target);
 
-        let mut window_lo = t_lo;
+        let mut window_low = data.first().unwrap().time;
         let mut index = 0usize;
 
         for _ in 0..target {
-            let window_hi = window_lo + win;
+            let window_high = window_low + win;
             let start = index;
 
             let mut low = f64::INFINITY;
@@ -367,7 +366,7 @@ impl Binner {
             let mut low_index = start;
             let mut high_index = start;
 
-            while index < data.len() && data[index].time < window_hi {
+            while index < data.len() && data[index].time < window_high {
                 let p = &data[index];
                 if p.min < low {
                     low = p.min;
@@ -402,24 +401,24 @@ impl Binner {
             });
 
             out.push(DataTimeStep {
-                time: 0.5 * (window_lo + window_hi),
+                time: 0.5 * (window_low + window_high),
                 min: low,
                 max: high,
             });
 
-            window_lo = window_hi;
+            window_low = window_high;
         }
         out
     }
 
     // --- API ---
 
-    pub fn bin(&mut self, data: &[DataTimeStep], cfg: &Config) -> Vec<DataTimeStep> {
+    pub fn bin(&mut self, data: &[DataTimeStep], config: &Config) -> Vec<DataTimeStep> {
         // Determine current target bin count
-        let target = cfg.x_chars * HR;
+        let target = config.x_chars * HR;
 
         // Cache invalidation triggers
-        let xrange_changed = cfg.x_range != self.last_xrange;
+        let xrange_changed = config.x_range != self.last_xrange;
         if self.strat != Strategy::Index // strategy switch
             || self.target != target     // terminal resize
             || xrange_changed
@@ -428,12 +427,12 @@ impl Binner {
             self.cached = false;
             self.buckets.clear();
             self.target = target;
-            self.last_xrange = cfg.x_range;
+            self.last_xrange = config.x_range;
         }
 
         match self.strat {
             Strategy::Index => self.bin_index(data),
-            Strategy::Time => self.bin_time(data, cfg),
+            Strategy::Time => self.bin_time(data, config),
         }
     }
 }

@@ -59,10 +59,7 @@ pub struct CsvArgs {
     #[arg(long, help = "Emit timing diagnostics")]
     pub debug: bool,
 
-    #[arg(long, help = "Sort by timestep before plotting")]
-    pub sort: bool,
-
-    #[arg(long, value_parser = parse_strategy, help = "Choose whether to bin the x_axis by index or time")]
+    #[arg(long, default_value = "time", value_parser = parse_strategy, help = "Choose whether to bin the x_axis by index or time")]
     pub bin_type: Strategy,
 }
 

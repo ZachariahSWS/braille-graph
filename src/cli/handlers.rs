@@ -20,8 +20,12 @@ use super::parse::{CsvArgs, DemoArgs};
 pub fn csv(a: CsvArgs) -> Result<(), GraphError> {
     let t_ingest = Instant::now();
     let mut data = read_csv_from_path(&a.file)?;
-    if a.sort {
-        data.sort_by(|l, r| l.time.partial_cmp(&r.time).unwrap());
+    if !data.windows(2).all(|w| w[0].time <= w[1].time) {
+        data.sort_by(|l, r| {
+            l.time
+                .partial_cmp(&r.time)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
     let dur_ingest = t_ingest.elapsed().as_micros();
 
@@ -66,7 +70,7 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
     let cols_available = term.0.0 as usize - BORDER_WIDTH - LABEL_GUTTER - label_w - 1; // safety margin
     let char_cols = cols_available.max(MIN_GRAPH_WIDTH);
     let points_needed = char_cols * BRAILLE_HORIZONTAL_RESOLUTION;
-    let dt = 1.0 / a.fps as f64;
+    let dt = 1.0 / a.fps.max(1) as f64;
 
     for i in 0..points_needed.min(a.steps) {
         if i > 0 {
@@ -112,7 +116,7 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
         let term = bounds::terminal_geometry();
         let cols_av = term.0.0 as usize - BORDER_WIDTH - LABEL_GUTTER - lbl_w - 1;
         let x_chars = cols_av.max(MIN_GRAPH_WIDTH);
-        let y_chars = (term.1.0 as usize).saturating_sub(4).max(MIN_GRAPH_HEIGHT);
+        let y_chars = (term.1.0 as usize).saturating_sub(5).max(MIN_GRAPH_HEIGHT);
         let max_pts = x_chars * BRAILLE_HORIZONTAL_RESOLUTION;
 
         if a.scroll && data.len() > max_pts {
@@ -133,7 +137,7 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
         let t1 = Instant::now();
         // Apply optional binning
         let binned = binner.bin(&data, &cfg);
-        let plot = preprocess_to_braille(&binned, &cfg, true)?;
+        let plot = preprocess_to_braille(&binned, &cfg, false)?;
         let processing_us = t1.elapsed().as_micros();
         total_processing_us += processing_us;
 

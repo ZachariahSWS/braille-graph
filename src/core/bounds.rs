@@ -3,7 +3,9 @@
 use terminal_size::{Height, Width, terminal_size};
 
 use crate::core::{
-    constants::{BORDER_WIDTH, BRAILLE_HORIZONTAL_RESOLUTION, LABEL_GUTTER, MIN_GRAPH_HEIGHT},
+    constants::{
+        BORDER_WIDTH, BRAILLE_HORIZONTAL_RESOLUTION as HR, LABEL_GUTTER, MIN_GRAPH_HEIGHT,
+    },
     data::DataTimeStep,
 };
 
@@ -14,30 +16,41 @@ pub enum Axis {
 }
 
 impl Axis {
-    /// Inclusive bounds with ±5 % padding; handles degenerate one-point sets.
+    /// Inclusive bounds without any padding.
+    ///
+    /// * If the series is empty or contains only non-finite values the
+    ///   fallback is `(0.0, 1.0)`.
+    /// * If *all* finite points are identical we expand by +-0.5 so the graph
+    ///   still has non-zero height/width.
     #[must_use]
     pub fn bounds(self, steps: &[DataTimeStep]) -> (f64, f64) {
-        let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
+        let (mut low, mut high) = (f64::INFINITY, f64::NEG_INFINITY);
+
         for s in steps {
             match self {
                 Self::X => {
-                    lo = lo.min(s.time);
-                    hi = hi.max(s.time);
+                    low = low.min(s.time);
+                    high = high.max(s.time);
                 }
                 Self::Y => {
-                    lo = lo.min(s.min);
-                    hi = hi.max(s.max);
+                    low = low.min(s.min);
+                    high = high.max(s.max);
                 }
             }
         }
-        if !lo.is_finite() || !hi.is_finite() {
+
+        // All points were non-finite or there were none at all.
+        if !low.is_finite() || !high.is_finite() {
             return (0.0, 1.0);
         }
-        if (hi - lo).abs() < f64::EPSILON {
-            return (lo - 0.5, hi + 0.5);
+
+        // Degenerate (flat-line) series - give it some breathing room.
+        if (high - low).abs() < f64::EPSILON {
+            return (low - 0.5, high + 0.5);
         }
-        let pad = (hi - lo) * 0.05;
-        (lo - pad, hi + pad)
+
+        // Normal case: exact extrema, no additional padding.
+        (low, high)
     }
 }
 
@@ -54,10 +67,10 @@ pub fn terminal_geometry() -> (Width, Height) {
 #[must_use]
 pub fn graph_dims((w, h): (Width, Height), samples: usize) -> (usize, usize) {
     let x_chars = std::cmp::min(
-        samples / BRAILLE_HORIZONTAL_RESOLUTION,
+        (samples + HR - 1) / HR,
         (w.0 as usize).saturating_sub(BORDER_WIDTH + LABEL_GUTTER + 1),
     );
-    let y_chars = std::cmp::max(MIN_GRAPH_HEIGHT, (h.0 as usize).saturating_sub(4));
+    let y_chars = std::cmp::max(MIN_GRAPH_HEIGHT, usize::from(h.0).saturating_sub(5));
     (x_chars, y_chars)
 }
 

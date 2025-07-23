@@ -11,7 +11,7 @@ use crate::{
         },
         error::GraphError,
     },
-    render::braille::BraillePlot,
+    render::braille::{BraillePlot, encode_braille_into_frame},
 };
 
 // Layout constants
@@ -27,15 +27,17 @@ const BR: &str = "┘";
 const H: &str = "─";
 const V: &str = "│";
 
-// Utilities
+const V_B: &[u8] = V.as_bytes();
+
+const RESET_SEQ: &[u8] = b"\x1b[0m";
+
 #[inline]
 fn hash64(s: &str) -> u64 {
     const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
     const FNV_PRIME: u64 = 0x0000_0100_0000_01B3;
     let mut h = FNV_OFFSET;
     for &b in s.as_bytes() {
-        h = h.wrapping_mul(FNV_PRIME);
-        h ^= u64::from(b);
+        h = h.wrapping_mul(FNV_PRIME) ^ u64::from(b);
     }
     h
 }
@@ -63,9 +65,13 @@ fn push_centered(buf: &mut String, text: &str, width: usize, color: &AnsiCode) {
 /// The heavy work of converting numeric data into UTF-8 braille bytes is
 /// delegated to `encode_braille`, so this function is now almost entirely
 /// string-glue.
-pub fn build_frame(config: &Config, plot: &BraillePlot) -> Result<String, GraphError> {
-    use crate::render::braille::encode_braille;
-
+pub fn build_frame(
+    config: &Config,
+    plot: &BraillePlot,
+    out: &mut String,
+) -> Result<(), GraphError> {
+    out.clear();
+    // Sanity-check geometry in columns
     if config.x_chars < MIN_GRAPH_WIDTH || config.y_chars < MIN_GRAPH_HEIGHT {
         return Err(GraphError::GraphTooSmall {
             want_w: MIN_GRAPH_WIDTH,
@@ -75,23 +81,84 @@ pub fn build_frame(config: &Config, plot: &BraillePlot) -> Result<String, GraphE
         });
     }
 
-    // --- Pre-Compute Layout ---
-
     let high_label = format!("{:.*}", DECIMAL_PRECISION, config.y_max);
     let low_label = format!("{:.*}", DECIMAL_PRECISION, config.y_min);
     let label_w = high_label.len().max(low_label.len());
 
     let line_length = config.x_chars + label_w + LABEL_GUTTER + BORDER_WIDTH;
-    let mut out = String::with_capacity(line_length * (config.y_chars + 4));
 
-    // Prepare braille canvas
-    let mut canvas = vec![0u8; config.x_chars * config.y_chars * 3];
-    encode_braille(&mut canvas, plot, config.x_chars, config.y_chars);
+    // Per-row sizes in bytes
+    let color_seq = config.color.as_str();
+    let braille_bytes = config.x_chars * 3; // 3 bytes per glyph
+
+    let fixed_prefix_bytes = V_B.len() // leading border
+        + label_w                      // y-label field
+        + LABEL_GUTTER                 // single space
+        + color_seq.len(); // color escape
+
+    let fixed_suffix_bytes = RESET_SEQ.len() + V_B.len(); // reset seq + trailing border
+
+    let row_bytes = fixed_prefix_bytes + braille_bytes + fixed_suffix_bytes; // *no* newline
+
+    // Allocate graph rows
+    let mut graph = vec![0u8; (row_bytes + 1) * config.y_chars]; // + newline
+
+    for r in 0..config.y_chars {
+        let base = r * (row_bytes + 1);
+
+        // Left border
+        graph[base..base + V_B.len()].copy_from_slice(V_B);
+
+        // fill label field with spaces
+        for i in 0..label_w {
+            graph[base + V_B.len() + i] = b' ';
+        }
+
+        // gutter spaces
+        for g in 0..LABEL_GUTTER {
+            graph[base + V_B.len() + label_w + g] = b' ';
+        }
+
+        // Color escape right after gutter
+        let col_start = base + fixed_prefix_bytes - color_seq.len();
+        graph[col_start..col_start + color_seq.len()].copy_from_slice(color_seq.as_bytes());
+
+        // Reset + right border
+        let reset_start = base + fixed_prefix_bytes + braille_bytes;
+        graph[reset_start..reset_start + RESET_SEQ.len()].copy_from_slice(RESET_SEQ);
+        graph[reset_start + RESET_SEQ.len()..reset_start + RESET_SEQ.len() + V_B.len()]
+            .copy_from_slice(V_B);
+
+        graph[base + row_bytes] = b'\n';
+    }
+
+    // Y-axis labels
+    let top_off = V_B.len() + label_w - high_label.len(); // bytes from row start
+    graph[top_off..top_off + high_label.len()].copy_from_slice(high_label.as_bytes());
+
+    let last_row_base = (config.y_chars - 1) * (row_bytes + 1);
+    let bot_off = last_row_base + V_B.len() + label_w - low_label.len();
+    graph[bot_off..bot_off + low_label.len()].copy_from_slice(low_label.as_bytes());
+
+    // Braille glyphs
+    let braille_offset = fixed_prefix_bytes;
+    encode_braille_into_frame(
+        &mut graph,
+        braille_offset,
+        row_bytes + 1,
+        plot,
+        config.x_chars,
+        config.y_chars,
+    );
+
+    debug_assert!(std::str::from_utf8(&graph).is_ok());
+
+    // --- Assemble final String ---
 
     // Title bar
     out.push_str(TL);
     push_centered(
-        &mut out,
+        out,
         &config.title,
         line_length - BORDER_WIDTH,
         &config.color,
@@ -106,35 +173,9 @@ pub fn build_frame(config: &Config, plot: &BraillePlot) -> Result<String, GraphE
     out.push('\n');
 
     // Graph rows
-    for row in 0..config.y_chars {
-        out.push_str(V);
+    out.push_str(unsafe { std::str::from_utf8_unchecked(&graph) });
 
-        // Y-axis labels
-        if row == 0 {
-            out.push_str(&format!("{high_label:>label_w$}"));
-        } else if row + 1 == config.y_chars {
-            out.push_str(&format!("{low_label:>label_w$}"));
-        } else {
-            out.push_str(&" ".repeat(label_w));
-        }
-        out.push(' '); // gutter
-
-        // Braille slice for this row
-        let offset = row * config.x_chars * 3;
-        let slice = &canvas[offset..offset + config.x_chars * 3];
-        // SAFETY: `encode_braille` wrote valid UTF-8.
-        // from_utf8(slice).unwrap() dramatically worsened performance (10µs per render frame with 20k steps in demo)
-        let glyphs = unsafe { std::str::from_utf8_unchecked(slice) };
-
-        out.push_str(config.color.as_str());
-        out.push_str(glyphs);
-        out.push_str(AnsiCode::reset().as_str());
-
-        out.push_str(V);
-        out.push('\n');
-    }
-
-    // Bottom padding
+    // blank line below graph
     out.push_str(V);
     out.push_str(&" ".repeat(line_length - BORDER_WIDTH));
     out.push_str(V);
@@ -143,14 +184,14 @@ pub fn build_frame(config: &Config, plot: &BraillePlot) -> Result<String, GraphE
     // Bottom bar
     out.push_str(BL);
     if let Some(sub) = &config.subtitle {
-        push_centered(&mut out, sub, line_length - BORDER_WIDTH, &config.color);
+        push_centered(out, sub, line_length - BORDER_WIDTH, &config.color);
     } else {
         out.push_str(&H.repeat(line_length - BORDER_WIDTH));
     }
     out.push_str(BR);
     out.push('\n');
 
-    Ok(out)
+    Ok(())
 }
 
 /// Hides the cursor on construction and shows it again on Drop
@@ -182,6 +223,7 @@ enum Strategy {
 pub struct Renderer {
     strat: Strategy,
     first_frame: bool,
+    scratch: String,
 }
 
 impl Renderer {
@@ -191,6 +233,7 @@ impl Renderer {
         Self {
             strat: Strategy::Full,
             first_frame: true,
+            scratch: String::new(),
         }
     }
     #[inline]
@@ -201,6 +244,7 @@ impl Renderer {
                 prev_hash: Vec::new(),
             },
             first_frame: true,
+            scratch: String::new(),
         }
     }
 
@@ -210,21 +254,21 @@ impl Renderer {
     /// If using `Renderer::delta`, hash collision leads to an
     /// unnecessary redraw but no corruption.
     pub fn render(&mut self, cfg: &Config, plot: &BraillePlot) -> Result<(), GraphError> {
-        let frame = build_frame(cfg, plot)?;
+        build_frame(cfg, plot, &mut self.scratch)?;
         let mut term = stdout().lock();
         let _cursor = CursorGuard::new();
         if self.first_frame {
             write!(term, "\x1b[2J")?;
             self.first_frame = false;
         }
+
         match &mut self.strat {
             Strategy::Full => {
-                write!(term, "\x1b[H")?;
-                term.write_all(frame.as_bytes())?;
+                write!(term, "\x1b[H{}", self.scratch)?;
             }
             Strategy::Delta { prev_hash } => {
                 let mut row = 1usize;
-                for line in frame.lines() {
+                for line in self.scratch.lines() {
                     let h = hash64(line);
                     if prev_hash.get(row - 1).is_none_or(|&p| p != h) {
                         write!(term, "\x1b[{row};1H{line}")?;

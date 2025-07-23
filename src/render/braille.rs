@@ -111,58 +111,75 @@ pub fn preprocess_to_braille(
     Ok(BraillePlot { steps })
 }
 
-/// Fill `buf` (row-major, **three bytes per cell**) with braille glyphs.
+/// Encode `plot` straight into `buf`, which is the full frame buffer.
 ///
-/// The caller guarantees:
-/// * `buf.len() == x_chars * y_chars * 3`
-/// * `plot.steps.len() == x_chars * 2` (one “step” per half-column)
-pub fn encode_braille(buf: &mut [u8], plot: &BraillePlot, x_chars: usize, y_chars: usize) {
-    debug_assert_eq!(buf.len(), x_chars * y_chars * 3);
+/// * `offset` – byte index of the first braille cell (row 0, col 0)
+/// * `row_stride` – bytes between successive graph rows in `dst`
+pub fn encode_braille_into_frame(
+    buf: &mut [u8],
+    offset: usize,
+    row_stride: usize,
+    plot: &BraillePlot,
+    x_chars: usize,
+    y_chars: usize,
+) {
+    debug_assert!(
+        buf.len() >= offset + row_stride * y_chars,
+        "frame buffer too small"
+    );
 
     // Iterate row-major for straightforward pointer math.
     for row in 0..y_chars {
-        let row_top = row * 4;
+        let row_top = row * BRAILLE_VERTICAL_RESOLUTION;
         let row_bottom = row_top + 3;
+        let row_base = offset + row * row_stride;
 
         for col in 0..x_chars {
             // Left half-column
-            let left_idx = col * 2;
-            let left_pat = if let Some(step) = plot.steps.get(left_idx) {
-                if step.max < row_top || step.min > row_bottom {
-                    0
-                } else {
-                    let lo = step.min.max(row_top) - row_top;
-                    let hi = step.max.min(row_bottom) - row_top;
-                    pattern_id(lo, hi)
-                }
-            } else {
-                0
-            };
+            let left_index = col * 2;
+
+            let left_pattern = plot
+                .steps
+                .get(left_index)
+                .and_then(|s| {
+                    if s.max < row_top || s.min > row_bottom {
+                        None
+                    } else {
+                        Some(pattern_id(
+                            s.min.max(row_top) - row_top,
+                            s.max.min(row_bottom) - row_top,
+                        ))
+                    }
+                })
+                .unwrap_or(0);
 
             // Right half-column
-            let right_pat = if let Some(step) = plot.steps.get(left_idx + 1) {
-                if step.max < row_top || step.min > row_bottom {
-                    0
-                } else {
-                    let lo = step.min.max(row_top) - row_top;
-                    let hi = step.max.min(row_bottom) - row_top;
-                    pattern_id(lo, hi)
-                }
-            } else {
-                0
-            };
+            let right_pattern = plot
+                .steps
+                .get(left_index + 1)
+                .and_then(|s| {
+                    if s.max < row_top || s.min > row_bottom {
+                        None
+                    } else {
+                        Some(pattern_id(
+                            s.min.max(row_top) - row_top,
+                            s.max.min(row_bottom) - row_top,
+                        ))
+                    }
+                })
+                .unwrap_or(0);
 
             // Combine masks and write three UTF-8 bytes directly.
             // https://en.wikipedia.org/wiki/Braille_Patterns
-            let mask = LEFT_MASKS[left_pat] | RIGHT_MASKS[right_pat];
-            let offset = (row * x_chars + col) * 3;
-            buf[offset] = 0xE2;
+            let mask = LEFT_MASKS[left_pattern] | RIGHT_MASKS[right_pattern];
+            let cell = row_base + col * 3;
+            buf[cell] = 0xE2;
             // Bitwise or the second byte with the most significant two bits
             // Represents the nonstandard bottom left and right dots
-            buf[offset + 1] = 0xA0 | ((mask >> 6) & 0x03);
+            buf[cell + 1] = 0xA0 | ((mask >> 6) & 0x03);
             // Bitwise or the third byte with the least significant six bits
             // Represents the normal six dots
-            buf[offset + 2] = 0x80 | (mask & 0x3F);
+            buf[cell + 2] = 0x80 | (mask & 0x3F);
         }
     }
 }

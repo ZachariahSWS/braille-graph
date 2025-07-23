@@ -12,7 +12,8 @@ pub enum ColorError {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AnsiCode {
     Static(&'static str),
-    Inline { buf: [u8; 20], len: u8 },
+    // 7 characters for `b"\x1b[38;2;"` plus up to 4 per rgb color for 19 total bytes possible.
+    Inline { buf: [u8; 19], len: u8 },
 }
 
 impl AnsiCode {
@@ -71,7 +72,7 @@ impl AnsiCode {
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     pub fn rgb(r: u8, g: u8, b: u8) -> Self {
-        let mut buf = [0u8; 20];
+        let mut buf = [0u8; 19];
         buf[..7].copy_from_slice(b"\x1b[38;2;");
         let mut len = 7;
 
@@ -120,7 +121,7 @@ impl AnsiCode {
     pub fn as_str(&self) -> &str {
         match self {
             Self::Static(s) => s,
-            // SAFETY: All ANSI codes are written by this code, guaranteed valid utf8
+            // SAFETY: All ANSI escape codes are written by this file, guaranteed valid utf8
             Self::Inline { buf, len } => unsafe { str::from_utf8_unchecked(&buf[..*len as usize]) },
         }
     }

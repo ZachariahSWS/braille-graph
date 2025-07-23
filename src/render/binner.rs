@@ -51,7 +51,7 @@ pub struct Binner {
     target: usize, // bins
     buckets: Vec<Bucket>,
     cached: bool,
-    last_len: usize,
+    last_length: usize,
     last_xrange: Option<(f64, f64)>,
     prev_first_t: Option<f64>, // to detect scroll
     prev_last_t: Option<f64>,
@@ -68,7 +68,7 @@ impl Binner {
             target: 0,
             buckets: Vec::new(),
             cached: false,
-            last_len: 0,
+            last_length: 0,
             last_xrange: None,
             prev_first_t: None,
             prev_last_t: None,
@@ -124,7 +124,7 @@ impl Binner {
             // No binning needed or impossible
             self.cached = false;
             self.buckets.clear();
-            self.last_len = n;
+            self.last_length = n;
             self.prev_first_t = data.first().map(|p| p.time);
             self.prev_last_t = data.last().map(|p| p.time);
             return data.to_vec();
@@ -135,7 +135,7 @@ impl Binner {
         }
 
         // Detect a one-step scroll with the same length.
-        let scrolled_one = n == self.last_len
+        let scrolled_one = n == self.last_length
             && self.prev_first_t.map_or(false, |prev| prev != data[0].time)
             && self
                 .prev_last_t
@@ -188,7 +188,7 @@ impl Binner {
 
         self.prev_first_t = Some(data[0].time);
         self.prev_last_t = Some(data[n - 1].time);
-        self.last_len = n;
+        self.last_length = n;
 
         self.emit(data)
     }
@@ -231,7 +231,7 @@ impl Binner {
         }
 
         self.cached = true;
-        self.last_len = n;
+        self.last_length = n;
         self.prev_first_t = Some(data[0].time);
         self.prev_last_t = Some(data[n - 1].time);
         self.emit(data)
@@ -246,7 +246,7 @@ impl Binner {
         // Full rebuild triggers
         let need_full = !self.cached
             || self.target != target
-            || self.last_len != n
+            || self.last_length != n
             || config.x_range != self.last_xrange;
 
         if need_full {
@@ -256,7 +256,7 @@ impl Binner {
 
             self.cached = true;
             self.target = target;
-            self.last_len = n;
+            self.last_length = n;
             self.last_xrange = config.x_range;
             self.win = Some(win);
             self.prev_first_t = Some(t_lo);
@@ -347,7 +347,7 @@ impl Binner {
         // 4 · update bookkeeping & emit
         self.prev_first_t = Some(t_lo_new);
         self.prev_last_t = Some(data.last().unwrap().time);
-        self.last_len = n;
+        self.last_length = n;
         self.emit(data)
     }
 

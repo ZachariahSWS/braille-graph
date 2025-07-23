@@ -120,7 +120,8 @@ impl AnsiCode {
     pub fn as_str(&self) -> &str {
         match self {
             Self::Static(s) => s,
-            Self::Inline { buf, len } => str::from_utf8(&buf[..*len as usize]).unwrap(),
+            // SAFETY: All ANSI codes are written by this code, guaranteed valid utf8
+            Self::Inline { buf, len } => unsafe { str::from_utf8_unchecked(&buf[..*len as usize]) },
         }
     }
 }

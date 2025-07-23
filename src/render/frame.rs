@@ -123,7 +123,8 @@ pub fn build_frame(config: &Config, plot: &BraillePlot) -> Result<String, GraphE
         let offset = row * config.x_chars * 3;
         let slice = &canvas[offset..offset + config.x_chars * 3];
         // SAFETY: `encode_braille` wrote valid UTF-8.
-        let glyphs = std::str::from_utf8(slice).unwrap();
+        // from_utf8(slice).unwrap() dramatically worsened performance (10µs per render frame with 20k steps in demo)
+        let glyphs = unsafe { std::str::from_utf8_unchecked(slice) };
 
         out.push_str(config.color.as_str());
         out.push_str(glyphs);

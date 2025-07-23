@@ -1,12 +1,12 @@
 //! Numeric series to UTF-8 braille grid, zero intermediate buffers.
 //!
 //! ### Workflow
-//! 1. `preprocess_to_braille` – unchanged logic – maps raw `DataTimeStep`
-//!    into pixel-space extrema (`GraphTimeStep`), one entry per *half* column.
-//! 2. `encode_braille` fills a caller-supplied buffer laid out **row-major**
-//!    with *exactly three bytes* per character cell.  Every braille scalar
-//!    U+2800‥U+28FF encodes to the fixed pattern
-//!    `E2 A0/‥ A0+((mask>>6)&3)  80|mask&0x3F`, so we can write bytes
+//! 1. `preprocess_to_braille` maps raw `DataTimeStep` into pixel-space
+//!     extrema (`GraphTimeStep`), one entry per *half* column.
+//! 2. `encode_braille` fills a caller-supplied buffer laid out row-major
+//!    with exactly three bytes per character cell.  Every braille scalar
+//!    U+2800..U+28FF encodes to the fixed pattern
+//!    `E2 A0/.. A0+((mask>>6)&3)  80|mask&0x3F`, so we can write bytes
 //!    directly without `char::encode_utf8` or any temporary “mask” array.
 //!
 //! The implementation relies on an invariant: the intersection of a

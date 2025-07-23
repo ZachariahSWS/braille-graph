@@ -11,15 +11,8 @@ use crate::{
         },
         error::GraphError,
     },
-    render::braille::{BraillePlot, GraphTimeStep},
+    render::braille::BraillePlot,
 };
-
-// Public constants (re-exported by braille.rs)
-pub(crate) const BRAILLE_DOT_POSITIONS: [[u8; 4]; 2] = [
-    [0, 1, 2, 6], // left  column: dots 1,2,3,7
-    [3, 4, 5, 7], // right column: dots 4,5,6,8
-];
-pub(crate) const BRAILLE_UNICODE_BASE: u32 = 0x2800;
 
 // Layout constants
 
@@ -65,35 +58,14 @@ fn push_centered(buf: &mut String, text: &str, width: usize, color: &AnsiCode) {
     buf.push_str(&H.repeat(pad_right));
 }
 
-/// Map two half-columns at (`char_idx`,`row`) to a single Unicode braille scalar.
-#[inline]
-fn braille_char(char_idx: usize, row: usize, plot: &BraillePlot) -> char {
-    let left = char_idx * 2;
-    let right = left + 1;
-    let base_y = row * 4;
-    let mut mask = 0u8;
-
-    let mut stamp = |step: &GraphTimeStep, col: usize| {
-        for y in 0..4 {
-            let g = base_y + y;
-            if g >= step.min && g <= step.max {
-                mask |= 1 << BRAILLE_DOT_POSITIONS[col][y];
-            }
-        }
-    };
-
-    if let Some(s) = plot.steps.get(left) {
-        stamp(s, 0);
-    }
-    if let Some(s) = plot.steps.get(right) {
-        stamp(s, 1);
-    }
-
-    char::from_u32(BRAILLE_UNICODE_BASE + u32::from(mask)).unwrap()
-}
-
-/// Render a complete frame into a single `String`.
+/// Render the full frame (title, borders, labels, graph) into a `String`.
+///
+/// The heavy work of converting numeric data into UTF-8 braille bytes is
+/// delegated to `encode_braille`, so this function is now almost entirely
+/// string-glue.
 pub fn build_frame(config: &Config, plot: &BraillePlot) -> Result<String, GraphError> {
+    use crate::render::braille::encode_braille;
+
     if config.x_chars < MIN_GRAPH_WIDTH || config.y_chars < MIN_GRAPH_HEIGHT {
         return Err(GraphError::GraphTooSmall {
             want_w: MIN_GRAPH_WIDTH,
@@ -103,33 +75,41 @@ pub fn build_frame(config: &Config, plot: &BraillePlot) -> Result<String, GraphE
         });
     }
 
+    // --- Pre-Compute Layout ---
+
     let high_label = format!("{:.*}", DECIMAL_PRECISION, config.y_max);
     let low_label = format!("{:.*}", DECIMAL_PRECISION, config.y_min);
     let label_w = high_label.len().max(low_label.len());
-    let line_len = config.x_chars + label_w + LABEL_GUTTER + BORDER_WIDTH;
 
-    let mut out = String::with_capacity(line_len * (config.y_chars + 4));
+    let line_length = config.x_chars + label_w + LABEL_GUTTER + BORDER_WIDTH;
+    let mut out = String::with_capacity(line_length * (config.y_chars + 4));
+
+    // Prepare braille canvas
+    let mut canvas = vec![0u8; config.x_chars * config.y_chars * 3];
+    encode_braille(&mut canvas, plot, config.x_chars, config.y_chars);
 
     // Title bar
     out.push_str(TL);
     push_centered(
         &mut out,
         &config.title,
-        line_len - BORDER_WIDTH,
+        line_length - BORDER_WIDTH,
         &config.color,
     );
     out.push_str(TR);
     out.push('\n');
 
-    // Top Padding
+    // Top padding
     out.push_str(V);
-    out.push_str(&" ".repeat(line_len - BORDER_WIDTH));
+    out.push_str(&" ".repeat(line_length - BORDER_WIDTH));
     out.push_str(V);
-    out.push_str("\n");
+    out.push('\n');
 
     // Graph rows
     for row in 0..config.y_chars {
         out.push_str(V);
+
+        // Y-axis labels
         if row == 0 {
             out.push_str(&format!("{high_label:>label_w$}"));
         } else if row + 1 == config.y_chars {
@@ -137,31 +117,38 @@ pub fn build_frame(config: &Config, plot: &BraillePlot) -> Result<String, GraphE
         } else {
             out.push_str(&" ".repeat(label_w));
         }
-        out.push(' ');
+        out.push(' '); // gutter
+
+        // Braille slice for this row
+        let offset = row * config.x_chars * 3;
+        let slice = &canvas[offset..offset + config.x_chars * 3];
+        // SAFETY: `encode_braille` wrote valid UTF-8.
+        let glyphs = std::str::from_utf8(slice).unwrap();
+
         out.push_str(config.color.as_str());
-        for col in 0..config.x_chars {
-            out.push(braille_char(col, row, plot));
-        }
+        out.push_str(glyphs);
         out.push_str(AnsiCode::reset().as_str());
+
         out.push_str(V);
         out.push('\n');
     }
 
-    // Bottom Padding
+    // Bottom padding
     out.push_str(V);
-    out.push_str(&" ".repeat(line_len - BORDER_WIDTH));
+    out.push_str(&" ".repeat(line_length - BORDER_WIDTH));
     out.push_str(V);
-    out.push_str("\n");
+    out.push('\n');
 
     // Bottom bar
     out.push_str(BL);
     if let Some(sub) = &config.subtitle {
-        push_centered(&mut out, sub, line_len - BORDER_WIDTH, &config.color);
+        push_centered(&mut out, sub, line_length - BORDER_WIDTH, &config.color);
     } else {
-        out.push_str(&H.repeat(line_len - BORDER_WIDTH));
+        out.push_str(&H.repeat(line_length - BORDER_WIDTH));
     }
     out.push_str(BR);
-    out.push_str("\n");
+    out.push('\n');
+
     Ok(out)
 }
 

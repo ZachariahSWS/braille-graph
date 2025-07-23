@@ -30,7 +30,7 @@ pub enum Strategy {
 
 impl Default for Strategy {
     fn default() -> Self {
-        Self::Index
+        Self::Time
     }
 }
 

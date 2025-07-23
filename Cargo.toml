@@ -2,12 +2,18 @@
 name = "braille-graph"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
+
 
 [lints.clippy]
 pedantic = "warn"
 cargo = "warn"
 
 [dependencies]
-lexical-core = "1.0.5"
 clap = { version = "4.0", features = ["derive"] }
 terminal_size = "0.4.2"
+
+[dependencies.lexical-core]
+version = "1.0.5"
+default-features = false
+features = ["parse-floats"]

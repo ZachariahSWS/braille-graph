@@ -93,26 +93,31 @@ fn braille_char(char_idx: usize, row: usize, plot: &BraillePlot) -> char {
 }
 
 /// Render a complete frame into a single `String`.
-pub fn build_frame(cfg: &Config, plot: &BraillePlot) -> Result<String, GraphError> {
-    if cfg.x_chars < MIN_GRAPH_WIDTH || cfg.y_chars < MIN_GRAPH_HEIGHT {
+pub fn build_frame(config: &Config, plot: &BraillePlot) -> Result<String, GraphError> {
+    if config.x_chars < MIN_GRAPH_WIDTH || config.y_chars < MIN_GRAPH_HEIGHT {
         return Err(GraphError::GraphTooSmall {
             want_w: MIN_GRAPH_WIDTH,
             want_h: MIN_GRAPH_HEIGHT,
-            got_w: cfg.x_chars,
-            got_h: cfg.y_chars,
+            got_w: config.x_chars,
+            got_h: config.y_chars,
         });
     }
 
-    let hi_lbl = format!("{:.*}", DECIMAL_PRECISION, cfg.y_max);
-    let lo_lbl = format!("{:.*}", DECIMAL_PRECISION, cfg.y_min);
-    let lbl_w = hi_lbl.len().max(lo_lbl.len());
-    let line_len = cfg.x_chars + lbl_w + LABEL_GUTTER + BORDER_WIDTH;
+    let high_label = format!("{:.*}", DECIMAL_PRECISION, config.y_max);
+    let low_label = format!("{:.*}", DECIMAL_PRECISION, config.y_min);
+    let label_w = high_label.len().max(low_label.len());
+    let line_len = config.x_chars + label_w + LABEL_GUTTER + BORDER_WIDTH;
 
-    let mut out = String::with_capacity(line_len * (cfg.y_chars + 4));
+    let mut out = String::with_capacity(line_len * (config.y_chars + 4));
 
     // Title bar
     out.push_str(TL);
-    push_centered(&mut out, &cfg.title, line_len - BORDER_WIDTH, &cfg.color);
+    push_centered(
+        &mut out,
+        &config.title,
+        line_len - BORDER_WIDTH,
+        &config.color,
+    );
     out.push_str(TR);
     out.push('\n');
 
@@ -123,18 +128,18 @@ pub fn build_frame(cfg: &Config, plot: &BraillePlot) -> Result<String, GraphErro
     out.push_str("\n");
 
     // Graph rows
-    for row in 0..cfg.y_chars {
+    for row in 0..config.y_chars {
         out.push_str(V);
         if row == 0 {
-            out.push_str(&format!("{hi_lbl:>lbl_w$}"));
-        } else if row + 1 == cfg.y_chars {
-            out.push_str(&format!("{lo_lbl:>lbl_w$}"));
+            out.push_str(&format!("{high_label:>label_w$}"));
+        } else if row + 1 == config.y_chars {
+            out.push_str(&format!("{low_label:>label_w$}"));
         } else {
-            out.push_str(&" ".repeat(lbl_w));
+            out.push_str(&" ".repeat(label_w));
         }
         out.push(' ');
-        out.push_str(cfg.color.as_str());
-        for col in 0..cfg.x_chars {
+        out.push_str(config.color.as_str());
+        for col in 0..config.x_chars {
             out.push(braille_char(col, row, plot));
         }
         out.push_str(AnsiCode::reset().as_str());
@@ -150,8 +155,8 @@ pub fn build_frame(cfg: &Config, plot: &BraillePlot) -> Result<String, GraphErro
 
     // Bottom bar
     out.push_str(BL);
-    if let Some(sub) = &cfg.subtitle {
-        push_centered(&mut out, sub, line_len - BORDER_WIDTH, &cfg.color);
+    if let Some(sub) = &config.subtitle {
+        push_centered(&mut out, sub, line_len - BORDER_WIDTH, &config.color);
     } else {
         out.push_str(&H.repeat(line_len - BORDER_WIDTH));
     }

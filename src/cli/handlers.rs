@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::{
     core::{
@@ -93,7 +93,7 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
     let mut frame_no: usize = 0;
     let mut i = data.len();
 
-    let frame_dt = std::time::Duration::from_secs_f64(1.0 / a.fps.max(1) as f64);
+    let frame_dt = Duration::from_secs_f64(dt);
     let mut next_frame_deadline = Instant::now() + frame_dt;
 
     while i < a.steps {

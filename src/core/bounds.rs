@@ -67,7 +67,7 @@ pub fn terminal_geometry() -> (Width, Height) {
 #[must_use]
 pub fn graph_dims((w, h): (Width, Height), samples: usize) -> (usize, usize) {
     let x_chars = std::cmp::min(
-        (samples + HR - 1) / HR,
+        samples.div_ceil(HR),
         (w.0 as usize).saturating_sub(BORDER_WIDTH + LABEL_GUTTER + 1),
     );
     let y_chars = std::cmp::max(MIN_GRAPH_HEIGHT, usize::from(h.0).saturating_sub(5));
@@ -76,6 +76,7 @@ pub fn graph_dims((w, h): (Width, Height), samples: usize) -> (usize, usize) {
 
 /// How wide will the y-axis labels be for *current* min/max?
 #[inline]
+#[must_use]
 pub fn y_label_width(y_min: f64, y_max: f64, decimals: usize) -> usize {
     use std::fmt::Write;
     let mut s = String::new();

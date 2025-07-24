@@ -1,7 +1,7 @@
 //! Full-screen braille frame renderer with:
-//! - persistent double buffering (graph_buf / prev_buf)
+//! - persistent double buffering (`graph_buf` / `prev_buf`)
 //! - row-diff via XOR (bitfield; ≤ 64 rows fast-path, else fallback to full)
-//! - batched writes using write_vectored
+//! - batched writes using `write_vectored`
 //! - cached chrome (top/bottom) buffers
 
 use std::io::{IoSlice, Write, stdout};
@@ -275,11 +275,11 @@ impl Renderer {
         Ok(())
     }
 
-    /// XOR per-row vs prev_buf (fast path if y_chars ≤ 64, else full redraw).
-    fn diff_rows_xor(&self, cfg: &Config) -> Result<u64, GraphError> {
+    /// XOR per-row vs `prev_buf` (fast path if `y_chars` ≤ 64, else full redraw).
+    fn diff_rows_xor(&self, cfg: &Config) -> u64 {
         let rows = cfg.y_chars;
         if rows > 64 {
-            return Ok(u64::MAX);
+            return u64::MAX;
         }
         let mut mask: u64 = 0;
         let stride = self.row_bytes + 1;
@@ -314,7 +314,7 @@ impl Renderer {
                 mask |= 1u64 << i;
             }
         }
-        Ok(mask)
+        mask
     }
 
     /// Main render entry.
@@ -359,7 +359,7 @@ impl Renderer {
                 self.prev_buf.copy_from_slice(&self.graph_buf);
             }
             Strategy::Delta => {
-                let dirty_mask = self.diff_rows_xor(config)?;
+                let dirty_mask = self.diff_rows_xor(config);
                 let rows = config.y_chars;
                 let dirty_count = if dirty_mask == u64::MAX && rows > 64 {
                     rows // force full
@@ -410,7 +410,7 @@ impl Renderer {
                     }
 
                     if !ios.is_empty() {
-                        term.write_vectored(&ios)?;
+                        let _ = term.write_vectored(&ios)?;
                     }
 
                     // Sync only dirty rows

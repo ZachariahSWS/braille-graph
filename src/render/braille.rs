@@ -113,8 +113,8 @@ pub fn preprocess_to_braille(
 
 /// Encode `plot` straight into `buf`, which is the full frame buffer.
 ///
-/// * `offset` – byte index of the first braille cell (row 0, col 0)
-/// * `row_stride` – bytes between successive graph rows in `dst`
+/// * `offset` -- byte index of the first braille cell (row 0, col 0)
+/// * `row_stride` -- bytes between successive graph rows in `buf`
 pub fn encode_braille_into_frame(
     buf: &mut [u8],
     offset: usize,

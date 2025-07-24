@@ -86,7 +86,6 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
     // Render loop
     let mut binner = Binner::new(Strategy::Time);
     let mut renderer = Renderer::delta();
-    let frame_pause = std::time::Duration::from_micros(1_000_000 / a.fps.max(1));
     let demo_start = Instant::now();
     let mut total_render_us: u128 = 0;
     let mut total_setup_us: u128 = 0;
@@ -94,8 +93,11 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
     let mut frame_no: usize = 0;
     let mut i = data.len();
 
+    let frame_dt = std::time::Duration::from_secs_f64(1.0 / a.fps.max(1) as f64);
+    let mut next_frame_deadline = Instant::now() + frame_dt;
+
     while i < a.steps {
-        let t0 = Instant::now();
+        let t = Instant::now();
         // Append the next point
         let dw = rng.randn() * dt.sqrt();
         x += a.mu.mul_add(dt, a.sigma * dw);
@@ -131,23 +133,29 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
             .x_range(data.first().unwrap().time, data.last().unwrap().time)
             .build()?;
 
-        let setup_us = t0.elapsed().as_micros();
-        total_setup_us += setup_us;
+        let setup_us = t.elapsed().as_micros();
 
-        let t1 = Instant::now();
         // Apply optional binning
         let binned = binner.bin(&data, &cfg);
         let plot = preprocess_to_braille(&binned, &cfg, false)?;
-        let processing_us = t1.elapsed().as_micros();
-        total_processing_us += processing_us;
+        let processing_us = t.elapsed().as_micros() - setup_us;
 
-        let t2 = Instant::now();
         renderer.render(&cfg, &plot)?;
-        let render_us = t2.elapsed().as_micros();
-        total_render_us += render_us;
-        frame_no += 1;
 
-        std::thread::sleep(frame_pause);
+        let now = Instant::now();
+        let render_us = (now - t).as_micros() - setup_us - processing_us;
+
+        if now < next_frame_deadline {
+            std::thread::sleep(next_frame_deadline - now);
+        } else {
+            next_frame_deadline = now;
+        }
+        next_frame_deadline += frame_dt;
+
+        frame_no += 1;
+        total_render_us += render_us;
+        total_setup_us += setup_us;
+        total_processing_us += processing_us;
     }
 
     if a.debug && frame_no > 0 {

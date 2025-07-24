@@ -260,7 +260,7 @@ impl Renderer {
         }
     }
 
-    /// Cache top and bottom 2 lines. Everything else is determined by `build_frame`
+    /// Cache top and bottom 2 lines. Everything else is determined by `build_graph_rows`
     /// and either renders it in full or only the lines that changed with delta.
     ///
     /// If using `Renderer::delta`, hash collision leads to an

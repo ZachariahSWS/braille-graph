@@ -77,12 +77,13 @@ pub fn graph_dims((w, h): (Width, Height), samples: usize) -> (usize, usize) {
 /// How wide will the y-axis labels be for *current* min/max?
 #[inline]
 #[must_use]
-pub fn y_label_width(y_min: f64, y_max: f64, decimals: usize) -> usize {
+pub fn y_label_width(y_range: (f64, f64), decimals: usize) -> usize {
+    let (low, high) = y_range;
     use std::fmt::Write;
     let mut s = String::new();
-    write!(&mut s, "{y_min:.decimals$}").unwrap();
+    write!(&mut s, "{low:.decimals$}").unwrap();
     let lo = s.len();
     s.clear();
-    write!(&mut s, "{y_max:.decimals$}").unwrap();
+    write!(&mut s, "{high:.decimals$}").unwrap();
     lo.max(s.len())
 }

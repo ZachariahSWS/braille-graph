@@ -75,11 +75,11 @@ pub fn preprocess_to_braille(
     }
 
     let vert_px = config.y_chars * BRAILLE_VERTICAL_RESOLUTION;
-    let y_span = config.y_max - config.y_min; // > 0 by construction
+    let y_span = config.y_range.1 - config.y_range.0; // > 0 by construction
 
     // λ : ℝ → [0,vert_px-1]
     let map = |y: f64| -> usize {
-        let r = ((y - config.y_min) / y_span).clamp(0.0, 1.0) * (vert_px - 1) as f64;
+        let r = ((y - config.y_range.0) / y_span).clamp(0.0, 1.0) * (vert_px - 1) as f64;
         (vert_px - 1) - r.round() as usize
     };
 

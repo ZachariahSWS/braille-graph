@@ -30,7 +30,7 @@ pub fn csv(a: CsvArgs) -> Result<(), GraphError> {
     let dur_ingest = t_ingest.elapsed().as_micros();
 
     // config
-    let (y_lo, y_hi) = Axis::Y.bounds(&data);
+    let (y_low, y_high) = Axis::Y.bounds(&data);
     let term = terminal_geometry();
     let (x_chars, y_chars) = graph_dims(term, data.len());
 
@@ -38,11 +38,10 @@ pub fn csv(a: CsvArgs) -> Result<(), GraphError> {
         .title(a.title)
         .subtitle_opt(&a.subtitle)
         .color(a.color)
-        .y_min(a.y_min.unwrap_or(y_lo))
-        .y_max(a.y_max.unwrap_or(y_hi));
+        .y_range(a.y_min.unwrap_or(y_low)..=a.y_max.unwrap_or(y_high));
 
     if let (Some(lo), Some(hi)) = (a.x_min, a.x_max) {
-        b = b.x_range(lo, hi);
+        b = b.x_range(lo..=hi);
     }
     let cfg = b.build()?;
 
@@ -90,7 +89,7 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
     let mut total_render_us: u128 = 0;
     let mut total_setup_us: u128 = 0;
     let mut total_processing_us: u128 = 0;
-    let mut frame_no: usize = 0;
+    let mut frame_number: usize = 0;
     let mut i = data.len();
 
     let frame_dt = Duration::from_secs_f64(dt);
@@ -109,38 +108,38 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
         i += 1;
 
         // Axis limits
-        let (y_lo, y_hi) = Axis::Y.bounds(&data);
+        let y_bounds = Axis::Y.bounds(&data);
 
         // Determine label width **now** (exact, not guessed)
-        let lbl_w = bounds::y_label_width(y_lo, y_hi, DECIMAL_PRECISION);
+        let label_width = bounds::y_label_width(y_bounds, DECIMAL_PRECISION);
 
         // Terminal geometry – recalc every frame (handles resizes)
         let term = bounds::terminal_geometry();
-        let cols_av = term.0.0 as usize - BORDER_WIDTH - LABEL_GUTTER - lbl_w - 1;
+        let cols_av = term.0.0 as usize - BORDER_WIDTH - LABEL_GUTTER - label_width - 1;
         let x_chars = cols_av.max(MIN_GRAPH_WIDTH);
         let y_chars = (term.1.0 as usize).saturating_sub(5).max(MIN_GRAPH_HEIGHT);
-        let max_pts = x_chars * BRAILLE_HORIZONTAL_RESOLUTION;
+        let max_points = x_chars * BRAILLE_HORIZONTAL_RESOLUTION;
 
-        if a.scroll && data.len() > max_pts {
-            data.drain(..data.len() - max_pts);
+        if a.scroll && data.len() > max_points {
+            data.drain(..data.len() - max_points);
         }
 
-        let cfg = Config::builder(x_chars, y_chars)
+        let config = Config::builder(x_chars, y_chars)
             .title("Itô Process Demo")
             .subtitle(format!("μ = {},  σ = {}", a.mu, a.sigma))
             .color(a.color)
-            .y_range(y_lo..=y_hi)
-            .x_range(data.first().unwrap().time, data.last().unwrap().time)
+            .y_range(y_bounds.0..=y_bounds.1)
+            .x_range(data.first().unwrap().time..=data.last().unwrap().time)
             .build()?;
 
         let setup_us = t.elapsed().as_micros();
 
         // Apply optional binning
-        let binned = binner.bin(&data, &cfg);
-        let plot = preprocess_to_braille(&binned, &cfg, false)?;
+        let binned = binner.bin(&data, &config);
+        let plot = preprocess_to_braille(&binned, &config, false)?;
         let processing_us = t.elapsed().as_micros() - setup_us;
 
-        renderer.render(&cfg, &plot)?;
+        renderer.render(&config, &plot)?;
 
         let now = Instant::now();
         let render_us = (now - t).as_micros() - setup_us - processing_us;
@@ -152,19 +151,20 @@ pub fn demo(a: &DemoArgs) -> Result<(), GraphError> {
         }
         next_frame_deadline += frame_dt;
 
-        frame_no += 1;
+        frame_number += 1;
         total_render_us += render_us;
         total_setup_us += setup_us;
         total_processing_us += processing_us;
     }
 
-    if a.debug && frame_no > 0 {
+    if a.debug && frame_number > 0 {
         let total_us = demo_start.elapsed().as_micros();
+        let inv_frame = 1.0 / frame_number as f64;
         eprintln!(
-            "demo complete: {frame_no} frames   total {total_us} µs\n   avg render {:.1} µs   avg setup {:.1}µs   avg processing {:.1}µs",
-            total_render_us as f64 / frame_no as f64,
-            total_setup_us as f64 / frame_no as f64,
-            total_processing_us as f64 / frame_no as f64,
+            "demo complete: {frame_number} frames   total {total_us} µs\n   avg render {:.1} µs   avg setup {:.1}µs   avg processing {:.1}µs",
+            total_render_us as f64 * inv_frame,
+            total_setup_us as f64 * inv_frame,
+            total_processing_us as f64 * inv_frame,
         );
     }
     Ok(())

@@ -8,14 +8,16 @@ use crate::core::{color::ColorError, data::ParseCsvError};
 #[derive(Debug)]
 pub enum ConfigError {
     MissingField(&'static str),
-    InvalidRange { lo: f64, hi: f64 },
+    InvalidRange { low: f64, high: f64 },
 }
 
 impl fmt::Display for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ConfigError::MissingField(x) => write!(f, "configuration missing field `{x}`"),
-            ConfigError::InvalidRange { lo, hi } => write!(f, "y_min {lo} must be < y_max {hi}"),
+            ConfigError::InvalidRange { low, high } => {
+                write!(f, "y_min {low} must be < y_max {high}")
+            }
         }
     }
 }

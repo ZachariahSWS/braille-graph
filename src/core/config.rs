@@ -7,11 +7,10 @@ use crate::core::{color::AnsiCode, error::ConfigError};
 pub struct Config {
     pub title: String,
     pub subtitle: Option<String>,
-    pub y_min: f64,
-    pub y_max: f64,
     pub x_chars: usize,
     pub y_chars: usize,
     pub color: AnsiCode,
+    pub y_range: (f64, f64),
     pub x_range: Option<(f64, f64)>,
 }
 
@@ -30,8 +29,7 @@ pub struct ConfigBuilder {
     y_chars: usize,
     title: Option<String>,
     subtitle: Option<String>,
-    y_min: Option<f64>,
-    y_max: Option<f64>,
+    y_range: Option<(f64, f64)>,
     x_range: Option<(f64, f64)>,
     color: Option<AnsiCode>,
 }
@@ -44,8 +42,7 @@ impl ConfigBuilder {
             y_chars,
             title: None,
             subtitle: None,
-            y_min: None,
-            y_max: None,
+            y_range: None,
             x_range: None,
             color: None,
         }
@@ -71,29 +68,17 @@ impl ConfigBuilder {
         }
         self
     }
-    #[inline]
-    #[must_use]
-    pub fn y_min(mut self, v: f64) -> Self {
-        self.y_min = Some(v);
-        self
-    }
-    #[inline]
-    #[must_use]
-    pub fn y_max(mut self, v: f64) -> Self {
-        self.y_max = Some(v);
-        self
-    }
+
     #[inline]
     #[must_use]
     pub fn y_range(mut self, r: std::ops::RangeInclusive<f64>) -> Self {
-        self.y_min = Some(*r.start());
-        self.y_max = Some(*r.end());
+        self.y_range = Some((*r.start(), *r.end()));
         self
     }
     #[inline]
     #[must_use]
-    pub fn x_range(mut self, lo: f64, hi: f64) -> Self {
-        self.x_range = Some((lo, hi));
+    pub fn x_range(mut self, r: std::ops::RangeInclusive<f64>) -> Self {
+        self.x_range = Some((*r.start(), *r.end()));
         self
     }
     #[inline]
@@ -104,22 +89,20 @@ impl ConfigBuilder {
     }
 
     pub fn build(self) -> Result<Config, ConfigError> {
-        let y_min = self.y_min.ok_or(ConfigError::MissingField("y_min"))?;
-        let y_max = self.y_max.ok_or(ConfigError::MissingField("y_max"))?;
-        if y_min >= y_max {
+        let y_range = self.y_range.ok_or(ConfigError::MissingField("y_range"))?;
+        if y_range.0 >= y_range.1 {
             return Err(ConfigError::InvalidRange {
-                lo: y_min,
-                hi: y_max,
+                low: y_range.0,
+                high: y_range.1,
             });
         }
         Ok(Config {
             title: self.title.unwrap_or_default(),
             subtitle: self.subtitle,
-            y_min,
-            y_max,
             x_chars: self.x_chars,
             y_chars: self.y_chars,
             color: self.color.unwrap_or_else(AnsiCode::industrial_orange),
+            y_range,
             x_range: self.x_range,
         })
     }

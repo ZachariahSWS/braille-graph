@@ -189,8 +189,8 @@ impl Renderer {
             });
         }
 
-        let high_label = format!("{:.*}", DECIMAL_PRECISION, cfg.y_max);
-        let low_label = format!("{:.*}", DECIMAL_PRECISION, cfg.y_min);
+        let high_label = format!("{:.*}", DECIMAL_PRECISION, cfg.y_range.1);
+        let low_label = format!("{:.*}", DECIMAL_PRECISION, cfg.y_range.0);
         let label_width = high_label.len().max(low_label.len());
 
         // Per-row byte layout
@@ -319,7 +319,7 @@ impl Renderer {
 
     /// Main render entry.
     pub fn render(&mut self, config: &Config, plot: &BraillePlot) -> Result<(), GraphError> {
-        let label_width = y_label_width(config.y_min, config.y_max, DECIMAL_PRECISION);
+        let label_width = y_label_width(config.y_range, DECIMAL_PRECISION);
 
         // Refresh chrome if needed
         let chrome_stale = self.chrome_top.is_empty()
